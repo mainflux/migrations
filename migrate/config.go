@@ -10,6 +10,7 @@ import (
 )
 
 const (
+	defLogLevel                 = "info"
 	defThingsDBHost             = "localhost"
 	defThingsDBPort             = "5432"
 	defThingsDBUser             = "mainflux"
@@ -29,6 +30,7 @@ const (
 	defUserIdentity             = "admin@example.com"
 	defUserSecret               = "12345678"
 
+	envLogLevel                 = "MF_LOG_LEVEL"
 	envThingsDBHost             = "MF_THINGS_DB_HOST"
 	envThingsDBPort             = "MF_THINGS_DB_PORT"
 	envThingsDBUser             = "MF_THINGS_DB_USER"
@@ -88,6 +90,7 @@ func LoadConfig() migrations.Config {
 	}
 
 	return migrations.Config{
+		LogLevel:     mainflux0130.Env(envLogLevel, defLogLevel),
 		ThingsConfig: thConfig,
 		UsersURL:     mainflux0130.Env(envUsersURL, defUsersURL),
 		ThingsURL:    mainflux0130.Env(envThingsURL, defThingsURL),

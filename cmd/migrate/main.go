@@ -1,14 +1,23 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"os"
 
+	mflog "github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/migrations/migrate"
 	"github.com/spf13/cobra"
 )
 
 func main() {
 	cfg := migrate.LoadConfig()
+	log.Println("Loaded configuration")
+
+	logger, err := mflog.New(os.Stdout, cfg.LogLevel)
+	if err != nil {
+		log.Fatalf(fmt.Sprintf("failed to init logger: %s", err.Error()))
+	}
 
 	var rootCmd = &cobra.Command{
 		Use:   "migrations",
@@ -16,7 +25,7 @@ func main() {
 		Long: `Tool for migrating from one version of mainflux to another.It migrates things, channels and thier connections.
 				Complete documentation is available at https://docs.mainflux.io`,
 		Run: func(cmd *cobra.Command, args []string) {
-			migrate.Migrate(cfg)
+			migrate.Migrate(cfg, logger)
 		},
 	}
 

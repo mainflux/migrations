@@ -10,6 +10,7 @@ type ThingsConfig struct {
 }
 
 type Config struct {
+	LogLevel     string
 	FromVersion  string
 	ToVersion    string
 	Operation    string

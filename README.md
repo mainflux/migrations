@@ -35,6 +35,17 @@ Make sure you have started mainflux deployment with version 0.13.0
 
 ```bash
 ./build/mainflux-migrate -f 0.13.0 -o export
+
+2023/03/20 18:21:45 Loaded configuration
+{"level":"info","message":"starting export from version 0.13.0","ts":"2023-03-20T15:21:45.766124907Z"}
+{"level":"debug","message":"connected to things database","ts":"2023-03-20T15:21:45.772270971Z"}
+{"level":"debug","message":"retrieved things from database","ts":"2023-03-20T15:21:45.78720368Z"}
+{"level":"debug","message":"written things to csv file","ts":"2023-03-20T15:21:45.795162923Z"}
+{"level":"debug","message":"retrieved channels from database","ts":"2023-03-20T15:21:45.809424493Z"}
+{"level":"debug","message":"written channels to csv file","ts":"2023-03-20T15:21:45.816320513Z"}
+{"level":"debug","message":"retrieved connections from database","ts":"2023-03-20T15:21:46.196243899Z"}
+{"level":"debug","message":"written connections to csv file","ts":"2023-03-20T15:21:46.204984177Z"}
+{"level":"info","message":"finished exporting from version 0.13.0","ts":"2023-03-20T15:21:46.205019163Z"}
 ```
 
 ### 2. Import To Version 0.14.0

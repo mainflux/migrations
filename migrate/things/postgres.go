@@ -196,10 +196,11 @@ func total(ctx context.Context, db mf13postgres.Database, query string, params i
 
 func toThing(dbth dbThing) (mf13things.Thing, error) {
 	var metadata map[string]interface{}
-	if err := json.Unmarshal([]byte(dbth.Metadata), &metadata); err != nil {
-		return mf13things.Thing{}, mf13errors.Wrap(mf13errors.ErrMalformedEntity, err)
+	if dbth.Metadata != nil {
+		if err := json.Unmarshal([]byte(dbth.Metadata), &metadata); err != nil {
+			return mf13things.Thing{}, mf13errors.Wrap(mf13errors.ErrMalformedEntity, err)
+		}
 	}
-
 	return mf13things.Thing{
 		ID:       dbth.ID,
 		Owner:    dbth.Owner,
@@ -211,8 +212,10 @@ func toThing(dbth dbThing) (mf13things.Thing, error) {
 
 func toChannel(dch dbChannel) (mf13things.Channel, error) {
 	var metadata map[string]interface{}
-	if err := json.Unmarshal([]byte(dch.Metadata), &metadata); err != nil {
-		return mf13things.Channel{}, mf13errors.Wrap(mf13errors.ErrMalformedEntity, err)
+	if dch.Metadata != nil {
+		if err := json.Unmarshal([]byte(dch.Metadata), &metadata); err != nil {
+			return mf13things.Channel{}, mf13errors.Wrap(mf13errors.ErrMalformedEntity, err)
+		}
 	}
 
 	return mf13things.Channel{

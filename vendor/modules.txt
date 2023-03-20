@@ -43,6 +43,15 @@ github.com/fsouza/go-dockerclient
 # github.com/go-gorp/gorp/v3 v3.0.2
 ## explicit; go 1.13
 github.com/go-gorp/gorp/v3
+# github.com/go-kit/kit v0.12.0
+## explicit; go 1.17
+github.com/go-kit/kit/log
+# github.com/go-kit/log v0.2.0
+## explicit; go 1.17
+github.com/go-kit/log
+# github.com/go-logfmt/logfmt v0.5.1
+## explicit; go 1.17
+github.com/go-logfmt/logfmt
 # github.com/gofrs/uuid v4.2.0+incompatible
 ## explicit
 github.com/gofrs/uuid
@@ -81,6 +90,7 @@ github.com/lib/pq/scram
 # github.com/mainflux/mainflux v0.0.0-20220415135135-92d8fb99bf82
 ## explicit; go 1.17
 github.com/mainflux/mainflux
+github.com/mainflux/mainflux/logger
 github.com/mainflux/mainflux/pkg/errors
 github.com/mainflux/mainflux/pkg/ulid
 github.com/mainflux/mainflux/things
