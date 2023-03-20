@@ -55,11 +55,11 @@ func LoadConfig() migrations.Config {
 
 	client, err := docker.NewClientFromEnv()
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("failed to create docker client with error %v", err))
 	}
 	imgs, err := client.ListContainers(docker.ListContainersOptions{All: true})
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("failed to list containers with error %v", err))
 	}
 	thingsDBHost := mainflux0130.Env(envThingsDBHost, defThingsDBHost)
 	for _, img := range imgs {

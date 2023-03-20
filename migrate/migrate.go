@@ -43,24 +43,24 @@ func Export13(cfg migrations.Config) {
 
 	ths, err := things.MFRetrieveThings(context.Background(), database)
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 	if err := things.ThingsToCSV(cfg.ThingsConfig.ThingsCSVPath, ths.Things); err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 	channels, err := things.MFRetrieveChannels(context.Background(), database)
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 	if err := things.ChannelsToCSV(cfg.ThingsConfig.ChannelsCSVPath, channels.Channels); err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 	connections, err := things.MFRetrieveConnections(context.Background(), database)
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 	if err := things.ConnectionsToCSV(cfg.ThingsConfig.ConnectionsCSVPath, connections.Connections); err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 }
 
@@ -81,7 +81,7 @@ func Import14(cfg migrations.Config) {
 	}
 	token, err := sdk.CreateToken(user)
 	if err != nil {
-		log.Panic(err)
+		log.Panic(fmt.Errorf("failed to create token: %v", err))
 	}
 	if err := things.CreateThings(sdk, cfg.ThingsConfig.ThingsCSVPath, token.AccessToken); err != nil {
 		log.Panic(err)
@@ -97,7 +97,7 @@ func Import14(cfg migrations.Config) {
 func connectToThingsDB(dbConfig thingsPostgres.Config) *sqlx.DB {
 	db, err := thingsPostgres.Connect(dbConfig)
 	if err != nil {
-		log.Panic(fmt.Errorf("Failed to connect to postgres: %s", err))
+		log.Panic(fmt.Errorf("Failed to connect to things postgres: %s", err))
 		os.Exit(1)
 	}
 	return db
