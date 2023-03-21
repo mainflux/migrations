@@ -12,7 +12,6 @@ import (
 
 func main() {
 	cfg := migrate.LoadConfig()
-	log.Println("Loaded configuration")
 
 	logger, err := mflog.New(os.Stdout, cfg.LogLevel)
 	if err != nil {

@@ -173,7 +173,7 @@ func CreateThings(sdk mf14sdk.SDK, usersPath, filePath, token string) error {
 			Status:   mf14sdk.EnabledStatus,
 		}
 		ths = append(ths, thing)
-		if len(ths) == int(limit) {
+		if len(ths) <= int(limit) {
 			if _, err := sdk.CreateThings(ths, token); err != nil {
 				return fmt.Errorf("failed to create things with error %v", err)
 			}
@@ -205,7 +205,7 @@ func CreateChannels(sdk mf14sdk.SDK, usersPath, filePath, token string) error {
 			Status:   mf14sdk.EnabledStatus,
 		}
 		chs = append(chs, channel)
-		if len(chs) == int(limit) {
+		if len(chs) <= int(limit) {
 			if _, err := sdk.CreateChannels(chs, token); err != nil {
 				return fmt.Errorf("failed to create channel with error %v", err)
 			}

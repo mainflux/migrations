@@ -36,16 +36,19 @@ Make sure you have started mainflux deployment with version 0.13.0
 ```bash
 ./build/mainflux-migrate -f 0.13.0 -o export
 
-2023/03/20 18:21:45 Loaded configuration
-{"level":"info","message":"starting export from version 0.13.0","ts":"2023-03-20T15:21:45.766124907Z"}
-{"level":"debug","message":"connected to things database","ts":"2023-03-20T15:21:45.772270971Z"}
-{"level":"debug","message":"retrieved things from database","ts":"2023-03-20T15:21:45.78720368Z"}
-{"level":"debug","message":"written things to csv file","ts":"2023-03-20T15:21:45.795162923Z"}
-{"level":"debug","message":"retrieved channels from database","ts":"2023-03-20T15:21:45.809424493Z"}
-{"level":"debug","message":"written channels to csv file","ts":"2023-03-20T15:21:45.816320513Z"}
-{"level":"debug","message":"retrieved connections from database","ts":"2023-03-20T15:21:46.196243899Z"}
-{"level":"debug","message":"written connections to csv file","ts":"2023-03-20T15:21:46.204984177Z"}
-{"level":"info","message":"finished exporting from version 0.13.0","ts":"2023-03-20T15:21:46.205019163Z"}
+2023/03/21 18:07:17 Loaded configuration
+{"level":"info","message":"starting export from version 0.13.0","ts":"2023-03-21T15:07:17.315215382Z"}
+{"level":"debug","message":"connected to users database","ts":"2023-03-21T15:07:17.320802332Z"}
+{"level":"debug","message":"connected to things database","ts":"2023-03-21T15:07:17.325035945Z"}
+{"level":"debug","message":"retrieved users from database","ts":"2023-03-21T15:07:17.32749626Z"}
+{"level":"debug","message":"written users to csv file","ts":"2023-03-21T15:07:17.328086728Z"}
+{"level":"debug","message":"retrieved things from database","ts":"2023-03-21T15:07:17.345744676Z"}
+{"level":"debug","message":"written things to csv file","ts":"2023-03-21T15:07:17.353103031Z"}
+{"level":"debug","message":"retrieved channels from database","ts":"2023-03-21T15:07:17.364124658Z"}
+{"level":"debug","message":"written channels to csv file","ts":"2023-03-21T15:07:17.371581915Z"}
+{"level":"debug","message":"retrieved connections from database","ts":"2023-03-21T15:07:17.421364996Z"}
+{"level":"debug","message":"written connections to csv file","ts":"2023-03-21T15:07:17.44838793Z"}
+{"level":"info","message":"finished exporting from version 0.13.0","ts":"2023-03-21T15:07:17.448434447Z"}
 ```
 
 ### 2. Import To Version 0.14.0
@@ -54,6 +57,13 @@ Make sure you have started mainflux deployment with version 0.14.0
 
 ```bash
 ./build/mainflux-migrate -t 0.14.0 -o import
+
+{"level":"info","message":"starting importing to version 0.14.0","ts":"2023-03-21T15:24:09.439589085Z"}
+{"level":"debug","message":"created user token","ts":"2023-03-21T15:24:09.508898562Z"}
+{"level":"debug","message":"created things","ts":"2023-03-21T15:24:12.748550379Z"}
+{"level":"debug","message":"created channels","ts":"2023-03-21T15:24:15.504673694Z"}
+{"level":"debug","message":"created connections","ts":"2023-03-21T15:26:41.718172029Z"}
+{"level":"info","message":"finished importing to version 0.14.0","ts":"2023-03-21T15:26:41.719890531Z"} 
 ```
 
 ## Testing
@@ -62,7 +72,7 @@ If you want to seed the database from version 0.13.0 you can run
 
 ```bash
 max=10
-for i in $(bash -c "echo {0..${max}}"); do ./provision -u testa$i@example.com -p 12345678 --num 50 --prefix seed; done
+for i in $(bash -c "echo {1..${max}}"); do ./provision -u testa$i@example.com -p 12345678 --num 50 --prefix seed; done
 ```
 
 This will create things and channels and connect them
