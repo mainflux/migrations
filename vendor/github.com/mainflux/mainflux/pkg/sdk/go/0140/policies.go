@@ -147,7 +147,7 @@ func (sdk mfSDK) Disconnect(connIDs ConnectionIDs, token string) SDKError {
 func (sdk mfSDK) ConnectThing(thingID, chanID, token string) SDKError {
 	url := fmt.Sprintf("%s/%s/%s/%s/%s", sdk.thingsURL, channelsEndpoint, chanID, thingsEndpoint, thingID)
 
-	_, _, err := sdk.processRequest(http.MethodPost, url, token, string(CTJSON), nil, http.StatusCreated)
+	_, _, err := sdk.processRequest(http.MethodPut, url, token, string(CTJSON), nil, http.StatusCreated)
 	return err
 }
 

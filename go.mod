@@ -6,10 +6,9 @@ require (
 	github.com/fsouza/go-dockerclient v1.9.6
 	github.com/jmoiron/sqlx v1.3.4
 	github.com/mainflux/mainflux v0.0.0-20220415135135-92d8fb99bf82
+	github.com/mainflux/mainflux/pkg/sdk/go/0140 v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.3.0
 )
-
-require github.com/mainflux/mainflux/pkg/sdk/go/0140 v0.0.0-00010101000000-000000000000
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
@@ -57,4 +56,4 @@ require (
 
 replace github.com/mainflux/mainflux/0130 => github.com/mainflux/mainflux v0.0.0-20220415135135-92d8fb99bf82
 
-replace github.com/mainflux/mainflux/pkg/sdk/go/0140 => github.com/rodneyosodo/mainflux/pkg/sdk/go v0.0.0-20230317163628-6067ddd6a2fc
+replace github.com/mainflux/mainflux/pkg/sdk/go/0140 => github.com/rodneyosodo/mainflux/pkg/sdk/go v0.0.0-20230321144058-d764206b0afa
