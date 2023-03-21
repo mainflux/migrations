@@ -96,7 +96,11 @@ func ThingsToCSV(filePath string, things []mf13things.Thing) error {
 
 	records := [][]string{{"ID", "Key", "Name", "Owner", "Metadata"}}
 	for _, thing := range things {
-		record := []string{thing.ID, thing.Key, thing.Name, thing.Owner, fmt.Sprintf("%v", thing.Metadata)}
+		metadata, err := util.MetadataToString(thing.Metadata)
+		if err != nil {
+			return err
+		}
+		record := []string{thing.ID, thing.Key, thing.Name, thing.Owner, metadata}
 		records = append(records, record)
 	}
 
@@ -115,7 +119,11 @@ func ChannelsToCSV(filePath string, channels []mf13things.Channel) error {
 
 	records := [][]string{{"ID", "Name", "Owner", "Metadata"}}
 	for _, channel := range channels {
-		record := []string{channel.ID, channel.Name, channel.Owner, fmt.Sprintf("%v", channel.Metadata)}
+		metadata, err := util.MetadataToString(channel.Metadata)
+		if err != nil {
+			return err
+		}
+		record := []string{channel.ID, channel.Name, channel.Owner, metadata}
 		records = append(records, record)
 	}
 
@@ -150,6 +158,10 @@ func CreateThings(sdk mf14sdk.SDK, usersPath, filePath, token string) error {
 	}
 	ths := []mf14sdk.Thing{}
 	for _, record := range records {
+		metadata, err := util.MetadataFromString(record[4])
+		if err != nil {
+			return err
+		}
 		thing := mf14sdk.Thing{
 			ID:    record[0],
 			Name:  record[2],
@@ -157,7 +169,8 @@ func CreateThings(sdk mf14sdk.SDK, usersPath, filePath, token string) error {
 			Credentials: mf14sdk.Credentials{
 				Secret: record[1],
 			},
-			Status: mf14sdk.EnabledStatus,
+			Metadata: metadata,
+			Status:   mf14sdk.EnabledStatus,
 		}
 		ths = append(ths, thing)
 	}
@@ -176,11 +189,16 @@ func CreateChannels(sdk mf14sdk.SDK, usersPath, filePath, token string) error {
 	}
 	chs := []mf14sdk.Channel{}
 	for _, record := range records {
+		metadata, err := util.MetadataFromString(record[3])
+		if err != nil {
+			return err
+		}
 		channel := mf14sdk.Channel{
-			ID:      record[0],
-			Name:    record[1],
-			OwnerID: users.GetUserID(usersPath, record[2]),
-			Status:  mf14sdk.EnabledStatus,
+			ID:       record[0],
+			Name:     record[1],
+			OwnerID:  users.GetUserID(usersPath, record[2]),
+			Metadata: metadata,
+			Status:   mf14sdk.EnabledStatus,
 		}
 		chs = append(chs, channel)
 	}

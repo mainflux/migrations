@@ -50,7 +50,11 @@ func UsersToCSV(filePath string, users []mf13users.User) error {
 
 	records := [][]string{{"ID", "Email", "Password", "Metadata"}}
 	for _, user := range users {
-		record := []string{user.ID, user.Email, user.Password, fmt.Sprintf("%v", user.Metadata)}
+		metadata, err := util.MetadataToString(user.Metadata)
+		if err != nil {
+			return err
+		}
+		record := []string{user.ID, user.Email, user.Password, metadata}
 		records = append(records, record)
 	}
 
