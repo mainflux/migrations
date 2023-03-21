@@ -24,7 +24,7 @@ func main() {
 		Short: "migrations is migration tool for Mainflux",
 		Long: `Tool for migrating from one version of mainflux to another.It migrates things, channels and thier connections.
 				Complete documentation is available at https://docs.mainflux.io`,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			migrate.Migrate(cfg, logger)
 		},
 	}

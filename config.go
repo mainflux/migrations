@@ -1,12 +1,20 @@
 package migrations
 
-import thingsPostgres "github.com/mainflux/mainflux/things/postgres"
+import (
+	mf13thingspostgres "github.com/mainflux/mainflux/things/postgres"
+	mf13userspostgres "github.com/mainflux/mainflux/users/postgres"
+)
 
 type ThingsConfig struct {
-	DBConfig           thingsPostgres.Config
+	DBConfig           mf13thingspostgres.Config
 	ThingsCSVPath      string
 	ChannelsCSVPath    string
 	ConnectionsCSVPath string
+}
+
+type UsersConfig struct {
+	DBConfig     mf13userspostgres.Config
+	UsersCSVPath string
 }
 
 type Config struct {
@@ -15,6 +23,7 @@ type Config struct {
 	ToVersion    string
 	Operation    string
 	ThingsConfig ThingsConfig
+	UsersConfig  UsersConfig
 	UsersURL     string
 	ThingsURL    string
 	UserIdentity string

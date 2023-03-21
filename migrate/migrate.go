@@ -9,9 +9,11 @@ import (
 	"github.com/jmoiron/sqlx"
 	mf13log "github.com/mainflux/mainflux/logger"
 	mf14sdk "github.com/mainflux/mainflux/pkg/sdk/go/0140"
-	mf13postgres "github.com/mainflux/mainflux/things/postgres"
+	mf13thingspostgres "github.com/mainflux/mainflux/things/postgres"
+	mf13userspostgres "github.com/mainflux/mainflux/users/postgres"
 	"github.com/mainflux/migrations"
 	"github.com/mainflux/migrations/migrate/things"
+	"github.com/mainflux/migrations/migrate/users"
 )
 
 const (
@@ -38,13 +40,30 @@ func Migrate(cfg migrations.Config, logger mf13log.Logger) {
 
 func Export13(cfg migrations.Config, logger mf13log.Logger) {
 	logger.Info(fmt.Sprintf("starting export from version %s", version13))
-	db := connectToThingsDB(cfg.ThingsConfig.DBConfig)
-	defer db.Close()
 
-	database := mf13postgres.NewDatabase(db)
+	usersDB := connectToUsersDB(cfg.UsersConfig.DBConfig)
+	defer usersDB.Close()
+
+	usersDatabase := mf13userspostgres.NewDatabase(usersDB)
+	logger.Debug("connected to users database")
+
+	thingsDB := connectToThingsDB(cfg.ThingsConfig.DBConfig)
+	defer thingsDB.Close()
+
+	thingsDatabase := mf13thingspostgres.NewDatabase(thingsDB)
 	logger.Debug("connected to things database")
 
-	ths, err := things.MFRetrieveThings(context.Background(), database)
+	us, err := users.MFRetrieveUsers(context.Background(), usersDatabase)
+	if err != nil {
+		logger.Error(fmt.Sprintf("%v", err))
+	}
+	logger.Debug("retrieved users from database")
+	if err := users.UsersToCSV(cfg.UsersConfig.UsersCSVPath, us.Users); err != nil {
+		logger.Error(fmt.Sprintf("%v", err))
+	}
+	logger.Debug("written users to csv file")
+
+	ths, err := things.MFRetrieveThings(context.Background(), thingsDatabase)
 	if err != nil {
 		logger.Error(fmt.Sprintf("%v", err))
 	}
@@ -53,7 +72,7 @@ func Export13(cfg migrations.Config, logger mf13log.Logger) {
 		logger.Error(fmt.Sprintf("%v", err))
 	}
 	logger.Debug("written things to csv file")
-	channels, err := things.MFRetrieveChannels(context.Background(), database)
+	channels, err := things.MFRetrieveChannels(context.Background(), thingsDatabase)
 	if err != nil {
 		logger.Error(fmt.Sprintf("%v", err))
 	}
@@ -62,7 +81,7 @@ func Export13(cfg migrations.Config, logger mf13log.Logger) {
 		logger.Error(fmt.Sprintf("%v", err))
 	}
 	logger.Debug("written channels to csv file")
-	connections, err := things.MFRetrieveConnections(context.Background(), database)
+	connections, err := things.MFRetrieveConnections(context.Background(), thingsDatabase)
 	if err != nil {
 		logger.Error(fmt.Sprintf("%v", err))
 	}
@@ -95,11 +114,11 @@ func Import14(cfg migrations.Config, logger mf13log.Logger) {
 		log.Panic(fmt.Errorf("failed to create token: %v", err))
 	}
 	logger.Debug("created user token")
-	if err := things.CreateThings(sdk, cfg.ThingsConfig.ThingsCSVPath, token.AccessToken); err != nil {
+	if err := things.CreateThings(sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ThingsCSVPath, token.AccessToken); err != nil {
 		log.Panic(err)
 	}
 	logger.Debug("created things")
-	if err := things.CreateChannels(sdk, cfg.ThingsConfig.ChannelsCSVPath, token.AccessToken); err != nil {
+	if err := things.CreateChannels(sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ChannelsCSVPath, token.AccessToken); err != nil {
 		log.Panic(err)
 	}
 	logger.Debug("created channels")
@@ -110,10 +129,19 @@ func Import14(cfg migrations.Config, logger mf13log.Logger) {
 	logger.Info(fmt.Sprintf("finished importing to version %s", version14))
 }
 
-func connectToThingsDB(dbConfig mf13postgres.Config) *sqlx.DB {
-	db, err := mf13postgres.Connect(dbConfig)
+func connectToThingsDB(dbConfig mf13thingspostgres.Config) *sqlx.DB {
+	db, err := mf13thingspostgres.Connect(dbConfig)
 	if err != nil {
 		log.Panic(fmt.Errorf("Failed to connect to things postgres: %s", err))
+		os.Exit(1)
+	}
+	return db
+}
+
+func connectToUsersDB(dbConfig mf13userspostgres.Config) *sqlx.DB {
+	db, err := mf13userspostgres.Connect(dbConfig)
+	if err != nil {
+		log.Panic(fmt.Errorf("Failed to connect to users postgres: %s", err))
 		os.Exit(1)
 	}
 	return db

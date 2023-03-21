@@ -62,7 +62,7 @@ If you want to seed the database from version 0.13.0 you can run
 
 ```bash
 max=10
-for i in $(bash -c "echo {2..${max}}"); do ./provision -u testa$i@example.com -p 12345678 --num 50 --prefix seed; done
+for i in $(bash -c "echo {0..${max}}"); do ./provision -u testa$i@example.com -p 12345678 --num 50 --prefix seed; done
 ```
 
 This will create things and channels and connect them
