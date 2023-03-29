@@ -10,7 +10,7 @@ define compile_service
 	go build -mod=vendor -ldflags "-s -w \
 	-X 'github.com/mainflux/mainflux.BuildTime=$(TIME)' \
 	-X 'github.com/mainflux/mainflux.Commit=$(COMMIT)'" \
-	-o ${BUILD_DIR}/mainflux-$(1) cmd/$(1)/main.go
+	-o ${BUILD_DIR}/mainflux-$(1) cmd/main.go
 endef
 
 all: $(SERVICES)
