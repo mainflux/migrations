@@ -13,7 +13,6 @@ make migrate
 ## Usage
 
 ```bash
-./build/mainflux-migrate --help
 Tool for migrating from one version of mainflux to another.It migrates things, channels and thier connections.
                                 Complete documentation is available at https://docs.mainflux.io
 
@@ -23,7 +22,7 @@ Usage:
 Flags:
   -f, --fromversion string   mainflux version you want to migrate from (default "0.13.0")
   -h, --help                 help for migrations
-  -o, --operation string     export dataor import data to a new mainflux deployment (default "export")
+  -o, --operation string     export data from an existing mainflux deployment or import data to a new mainflux deployment (default "export")
   -t, --toversion string     mainflux version you want to migrate to (default "0.14.0")
 ```
 

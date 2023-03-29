@@ -31,7 +31,7 @@ func main() {
 	// Root Flags
 	rootCmd.PersistentFlags().StringVarP(&cfg.FromVersion, "fromversion", "f", "0.13.0", "mainflux version you want to migrate from")
 	rootCmd.PersistentFlags().StringVarP(&cfg.ToVersion, "toversion", "t", "0.14.0", "mainflux version you want to migrate to")
-	rootCmd.PersistentFlags().StringVarP(&cfg.Operation, "operation", "o", "export", "export dataor import data to a new mainflux deployment")
+	rootCmd.PersistentFlags().StringVarP(&cfg.Operation, "operation", "o", "export", "export data from an existing mainflux deployment or import data to a new mainflux deployment")
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)
