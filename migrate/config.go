@@ -2,6 +2,7 @@ package migrate
 
 import (
 	"fmt"
+	"log"
 
 	docker "github.com/fsouza/go-dockerclient"
 	mainflux13 "github.com/mainflux/mainflux"
@@ -82,11 +83,11 @@ func LoadConfig() migrations.Config {
 
 	client, err := docker.NewClientFromEnv()
 	if err != nil {
-		panic(fmt.Errorf("failed to create docker client with error %v", err))
+		log.Fatalf("failed to create docker client with error %v", err)
 	}
 	imgs, err := client.ListContainers(docker.ListContainersOptions{All: true})
 	if err != nil {
-		panic(fmt.Errorf("failed to list containers with error %v", err))
+		log.Fatalf("failed to list containers with error %v", err)
 	}
 	thingsDBHost := mainflux13.Env(envThingsDBHost, defThingsDBHost)
 	for _, img := range imgs {
@@ -100,11 +101,11 @@ func LoadConfig() migrations.Config {
 
 	client, err = docker.NewClientFromEnv()
 	if err != nil {
-		panic(fmt.Errorf("failed to create docker client with error %v", err))
+		log.Fatalf("failed to create docker client with error %v", err)
 	}
 	imgs, err = client.ListContainers(docker.ListContainersOptions{All: true})
 	if err != nil {
-		panic(fmt.Errorf("failed to list containers with error %v", err))
+		log.Fatalf("failed to list containers with error %v", err)
 	}
 	usersDBHost := mainflux13.Env(envUsersDBHost, defUsersDBHost)
 	for _, img := range imgs {
