@@ -8,7 +8,9 @@ import (
 	_ "net/http/pprof"
 	"sync"
 
+	"github.com/gosuri/uilive"
 	"github.com/jmoiron/sqlx"
+	"github.com/julz/prettyprogress"
 	mf13log "github.com/mainflux/mainflux/logger"
 	mf14sdk "github.com/mainflux/mainflux/pkg/sdk/go/0140"
 	mf13thingspostgres "github.com/mainflux/mainflux/things/postgres"
@@ -60,19 +62,25 @@ func Export13(cfg migrations.Config, logger mf13log.Logger) {
 	thingsDatabase := mf13thingspostgres.NewDatabase(thingsDB)
 	logger.Debug("connected to things database")
 
+	w := uilive.New()
+	w.Start()
+	defer w.Stop()
+
+	multiStep := prettyprogress.NewFancyMultistep(w)
+
+	usersStep := multiStep.AddStep("Retrieving Users", 0)
+	thingsStep := multiStep.AddStep("Retrieving Things", 0)
+	channelsStep := multiStep.AddStep("Retrieving Channels", 0)
+	connStep := multiStep.AddStep("Retrieving Connections", 0)
+
 	var wg sync.WaitGroup
 	wg.Add(4)
 
 	go func() {
-		us, err := users13.RetrieveUsers(context.Background(), usersDatabase)
-		if err != nil {
+		if err := users13.RetrieveAndWriteUsers(context.Background(), usersDatabase, cfg.UsersConfig13.UsersCSVPath); err != nil {
 			logger.Error(err.Error())
 		}
-		logger.Debug("retrieved users from database")
-		if err := users13.UsersToCSV(cfg.UsersConfig13.UsersCSVPath, us.Users); err != nil {
-			logger.Error(err.Error())
-		}
-		logger.Debug("written users to csv file")
+		usersStep.Complete("Finished Retrieveing Users")
 		defer wg.Done()
 	}()
 
@@ -80,7 +88,7 @@ func Export13(cfg migrations.Config, logger mf13log.Logger) {
 		if err := things13.RetrieveAndWriteThings(context.Background(), thingsDatabase, cfg.ThingsConfig13.ThingsCSVPath); err != nil {
 			logger.Error(err.Error())
 		}
-		logger.Debug("written things to csv file")
+		thingsStep.Complete("Finished Retrieveing Things")
 		defer wg.Done()
 	}()
 
@@ -88,7 +96,7 @@ func Export13(cfg migrations.Config, logger mf13log.Logger) {
 		if err := things13.RetrieveAndWriteChannels(context.Background(), thingsDatabase, cfg.ThingsConfig13.ChannelsCSVPath); err != nil {
 			logger.Error(err.Error())
 		}
-		logger.Debug("written channels to csv file")
+		channelsStep.Complete("Finished Retrieveing Channels")
 		defer wg.Done()
 	}()
 
@@ -96,7 +104,7 @@ func Export13(cfg migrations.Config, logger mf13log.Logger) {
 		if err := things13.RetrieveAndWriteConnections(context.Background(), thingsDatabase, cfg.ThingsConfig13.ConnectionsCSVPath); err != nil {
 			logger.Error(err.Error())
 		}
-		logger.Debug("written connections to csv file")
+		connStep.Complete("Finished Retrieveing Connection")
 		defer wg.Done()
 	}()
 

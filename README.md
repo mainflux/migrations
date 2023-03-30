@@ -35,19 +35,15 @@ Make sure you have started mainflux deployment with version 0.13.0
 ```bash
 ./build/mainflux-migrate -f 0.13.0 -o export
 
-2023/03/21 18:07:17 Loaded configuration
-{"level":"info","message":"starting export from version 0.13.0","ts":"2023-03-21T15:07:17.315215382Z"}
-{"level":"debug","message":"connected to users database","ts":"2023-03-21T15:07:17.320802332Z"}
-{"level":"debug","message":"connected to things database","ts":"2023-03-21T15:07:17.325035945Z"}
-{"level":"debug","message":"retrieved users from database","ts":"2023-03-21T15:07:17.32749626Z"}
-{"level":"debug","message":"written users to csv file","ts":"2023-03-21T15:07:17.328086728Z"}
-{"level":"debug","message":"retrieved things from database","ts":"2023-03-21T15:07:17.345744676Z"}
-{"level":"debug","message":"written things to csv file","ts":"2023-03-21T15:07:17.353103031Z"}
-{"level":"debug","message":"retrieved channels from database","ts":"2023-03-21T15:07:17.364124658Z"}
-{"level":"debug","message":"written channels to csv file","ts":"2023-03-21T15:07:17.371581915Z"}
-{"level":"debug","message":"retrieved connections from database","ts":"2023-03-21T15:07:17.421364996Z"}
-{"level":"debug","message":"written connections to csv file","ts":"2023-03-21T15:07:17.44838793Z"}
-{"level":"info","message":"finished exporting from version 0.13.0","ts":"2023-03-21T15:07:17.448434447Z"}
+{"level":"info","message":"starting export from version 0.13.0","ts":"2023-03-30T14:32:53.725849074Z"}
+{"level":"debug","message":"connected to users database","ts":"2023-03-30T14:32:53.730192129Z"}
+{"level":"debug","message":"connected to things database","ts":"2023-03-30T14:32:53.737027714Z"}
+
+ ✓  Finished Retrieveing Users
+ ✓  Finished Retrieveing Things
+ ✓  Finished Retrieveing Channels
+ ✓  Finished Retrieveing Connection
+{"level":"info","message":"finished exporting from version 0.13.0","ts":"2023-03-30T14:32:55.816558105Z"}
 ```
 
 ### 2. Import To Version 0.14.0

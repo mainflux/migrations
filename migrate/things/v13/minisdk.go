@@ -10,7 +10,6 @@ import (
 	mf13things "github.com/mainflux/mainflux/things"
 	mf13postgres "github.com/mainflux/mainflux/things/postgres"
 	"github.com/mainflux/migrations/internal/util"
-	
 )
 
 var (

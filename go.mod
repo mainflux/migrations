@@ -4,7 +4,9 @@ go 1.19
 
 require (
 	github.com/fsouza/go-dockerclient v1.9.6
+	github.com/gosuri/uilive v0.0.4
 	github.com/jmoiron/sqlx v1.3.4
+	github.com/julz/prettyprogress v0.0.0-20191213134954-46101f6567ae
 	github.com/mainflux/mainflux v0.0.0-20220415135135-92d8fb99bf82
 	github.com/mainflux/mainflux/pkg/sdk/go/0140 v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.3.0
@@ -18,6 +20,7 @@ require (
 	github.com/docker/docker v23.0.1+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
+	github.com/fatih/color v1.13.0 // indirect
 	github.com/go-gorp/gorp/v3 v3.0.2 // indirect
 	github.com/go-kit/kit v0.12.0 // indirect
 	github.com/go-kit/log v0.2.0 // indirect
@@ -29,6 +32,8 @@ require (
 	github.com/klauspost/compress v1.14.2 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/lib/pq v1.10.4 // indirect
+	github.com/mattn/go-colorable v0.1.12 // indirect
+	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/moby/patternmatcher v0.5.0 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6 // indirect
