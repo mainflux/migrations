@@ -1,6 +1,6 @@
 # Mainflux Migration Tool
 
-Tool that is used to migrate from one version of [mainflux][mainfluxLink] to another.
+A tool that is used to migrate from one version of [mainflux][mainfluxLink] to another.
 
 ## Installation
 
@@ -70,7 +70,7 @@ Make sure you have started mainflux deployment with version 0.14.0
 If you want to seed the database from version 0.13.0 you can run
 
 ```bash
-max=10
+max=50
 for i in $(bash -c "echo {1..${max}}"); do ./provision -u testa$i@example.com -p 12345678 --num 50 --prefix seed; done
 ```
 

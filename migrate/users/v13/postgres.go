@@ -1,4 +1,4 @@
-package users
+package users13
 
 import (
 	"context"
@@ -17,8 +17,8 @@ type db13User struct {
 	Metadata []byte `db:"metadata"`
 }
 
-// RetrieveAllUsers retrieves users from the database with the given page navigation parameters
-func RetrieveAllUsers(ctx context.Context, db mf13postgres.Database, pm mf13users.PageMetadata) (mf13users.UserPage, error) {
+// dbRetrieveUsers retrieves users from the database with the given page navigation parameters
+func dbRetrieveUsers(ctx context.Context, db mf13postgres.Database, pm mf13users.PageMetadata) (mf13users.UserPage, error) {
 	q := `SELECT id, email, password, metadata FROM users LIMIT :limit OFFSET :offset;`
 
 	params := map[string]interface{}{

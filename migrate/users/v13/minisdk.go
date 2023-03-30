@@ -1,4 +1,4 @@
-package users
+package users13
 
 import (
 	"context"
@@ -18,16 +18,16 @@ var (
 	retrieveErrString = "error %v occured at offset: %d and total: %d during %s"
 )
 
-// MFRetrieveUsers retrieves existing users from the database
-func MFRetrieveUsers(ctx context.Context, db mf13postgres.Database) (mf13users.UserPage, error) {
-	usersPage, err := RetrieveAllUsers(ctx, db, mf13users.PageMetadata{Offset: offset, Limit: limit})
+// RetrieveUsers retrieves existing users from the database
+func RetrieveUsers(ctx context.Context, db mf13postgres.Database) (mf13users.UserPage, error) {
+	usersPage, err := dbRetrieveUsers(ctx, db, mf13users.PageMetadata{Offset: offset, Limit: limit})
 	if err != nil {
 		return mf13users.UserPage{}, fmt.Errorf(retrieveErrString, err, offset, limit, retrievUsersOps)
 	}
 	o := limit
 	limit = util.UpdateLimit(usersPage.Total)
 	for o < usersPage.Total {
-		ths, err := RetrieveAllUsers(ctx, db, mf13users.PageMetadata{Offset: o, Limit: limit})
+		ths, err := dbRetrieveUsers(ctx, db, mf13users.PageMetadata{Offset: o, Limit: limit})
 		if err != nil {
 			return mf13users.UserPage{}, fmt.Errorf(retrieveErrString, err, o, limit, retrievUsersOps)
 		}
@@ -59,22 +59,4 @@ func UsersToCSV(filePath string, users []mf13users.User) error {
 	}
 
 	return util.WriteData(w, f, records, writeUsersOps)
-}
-
-// GetUserID returns the user ID associated with the email address provided
-func GetUserID(filePath, email string) string {
-	// TODO Return UseID from UserEmail
-	if email == "" {
-		return ""
-	}
-	records, err := util.ReadData(filePath)
-	if err != nil {
-		return ""
-	}
-	for _, record := range records {
-		if record[1] == email {
-			return record[0]
-		}
-	}
-	return email
 }

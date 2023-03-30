@@ -1,4 +1,4 @@
-package things
+package things13
 
 import (
 	"context"
@@ -36,8 +36,8 @@ type ConnectionsPage struct {
 	Connections []Connection
 }
 
-// RetrieveAllThings retrieves things from the database with the given page navigation parameters
-func RetrieveAllThings(ctx context.Context, db mf13postgres.Database, pm mf13things.PageMetadata) (mf13things.Page, error) {
+// dbRetrieveThings retrieves things from the database with the given page navigation parameters
+func dbRetrieveThings(ctx context.Context, db mf13postgres.Database, pm mf13things.PageMetadata) (mf13things.Page, error) {
 	q := `SELECT id, owner, name, key, metadata FROM things LIMIT :limit OFFSET :offset;`
 
 	params := map[string]interface{}{
@@ -85,8 +85,8 @@ func RetrieveAllThings(ctx context.Context, db mf13postgres.Database, pm mf13thi
 	return page, nil
 }
 
-// RetrieveAllChannels retrieves things from the database with the given page navigation parameters
-func RetrieveAllChannels(ctx context.Context, db mf13postgres.Database, pm mf13things.PageMetadata) (mf13things.ChannelsPage, error) {
+// dbRetrieveChannels retrieves things from the database with the given page navigation parameters
+func dbRetrieveChannels(ctx context.Context, db mf13postgres.Database, pm mf13things.PageMetadata) (mf13things.ChannelsPage, error) {
 	q := `SELECT id, owner, name, metadata FROM channels LIMIT :limit OFFSET :offset;`
 
 	params := map[string]interface{}{
@@ -134,8 +134,8 @@ func RetrieveAllChannels(ctx context.Context, db mf13postgres.Database, pm mf13t
 	return page, nil
 }
 
-// RetrieveAllConnections retrieves things from the database with the given page navigation parameters
-func RetrieveAllConnections(ctx context.Context, db mf13postgres.Database, pm mf13things.PageMetadata) (ConnectionsPage, error) {
+// dbRetrieveConnections retrieves things from the database with the given page navigation parameters
+func dbRetrieveConnections(ctx context.Context, db mf13postgres.Database, pm mf13things.PageMetadata) (ConnectionsPage, error) {
 	q := `SELECT channel_id, channel_owner, thing_id, thing_owner FROM connections LIMIT :limit OFFSET :offset;`
 
 	params := map[string]interface{}{

@@ -138,25 +138,25 @@ func LoadConfig() migrations.Config {
 		SSLRootCert: mainflux13.Env(envUsersDBSSLRootCert, defUsersDBSSLRootCert),
 	}
 
-	thConfig := migrations.ThingsConfig{
+	thConfig := migrations.ThingsConfig13{
 		DBConfig:           tdbConfig,
 		ThingsCSVPath:      mainflux13.Env(envThingsCSVPath, defThingsCSVPath),
 		ChannelsCSVPath:    mainflux13.Env(envChannelsCSVPath, defChannelsCSVPath),
 		ConnectionsCSVPath: mainflux13.Env(envConnectionCSVPath, defConnectionCSVPath),
 	}
 
-	uConfig := migrations.UsersConfig{
+	uConfig := migrations.UsersConfig13{
 		DBConfig:     udbConfig,
 		UsersCSVPath: mainflux13.Env(envUsersCSVPath, defUsersCSVPath),
 	}
 
 	return migrations.Config{
-		LogLevel:     mainflux13.Env(envLogLevel, defLogLevel),
-		ThingsConfig: thConfig,
-		UsersConfig:  uConfig,
-		UsersURL:     mainflux13.Env(envUsersURL, defUsersURL),
-		ThingsURL:    mainflux13.Env(envThingsURL, defThingsURL),
-		UserIdentity: mainflux13.Env(envUserIdentity, defUserIdentity),
-		UserSecret:   mainflux13.Env(envUserSecret, defUserSecret),
+		LogLevel:       mainflux13.Env(envLogLevel, defLogLevel),
+		ThingsConfig13: thConfig,
+		UsersConfig13:  uConfig,
+		UsersURL:       mainflux13.Env(envUsersURL, defUsersURL),
+		ThingsURL:      mainflux13.Env(envThingsURL, defThingsURL),
+		UserIdentity:   mainflux13.Env(envUserIdentity, defUserIdentity),
+		UserSecret:     mainflux13.Env(envUserSecret, defUserSecret),
 	}
 }
