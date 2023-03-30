@@ -42,8 +42,8 @@ func CreateFile(filePath, operation string) (*os.File, error) {
 	return f, nil
 }
 
-// ReadData reads data from from the provided csv file
-func ReadData(fileName string) ([][]string, error) {
+// ReadAllData reads data from from the provided csv file
+func ReadAllData(fileName string) ([][]string, error) {
 	f, err := os.Open(fileName)
 	if err != nil {
 		return [][]string{}, err

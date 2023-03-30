@@ -9,7 +9,7 @@ func GetUserID(filePath, email string) string {
 	if email == "" {
 		return ""
 	}
-	records, err := util.ReadData(filePath)
+	records, err := util.ReadAllData(filePath)
 	if err != nil {
 		return ""
 	}

@@ -7,10 +7,13 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"sync"
+	"time"
 
+	"github.com/fatih/color"
 	"github.com/gosuri/uilive"
 	"github.com/jmoiron/sqlx"
 	"github.com/julz/prettyprogress"
+	"github.com/julz/prettyprogress/ui"
 	mf13log "github.com/mainflux/mainflux/logger"
 	mf14sdk "github.com/mainflux/mainflux/pkg/sdk/go/0140"
 	mf13thingspostgres "github.com/mainflux/mainflux/things/postgres"
@@ -66,7 +69,15 @@ func Export13(cfg migrations.Config, logger mf13log.Logger) {
 	w.Start()
 	defer w.Stop()
 
-	multiStep := prettyprogress.NewFancyMultistep(w)
+	bullets := ui.AnimatedBulletSet
+	bullets.Running = bullets.Running.WithColor(color.New(color.FgGreen))
+	multiStep := prettyprogress.NewFancyMultistep(
+		w,
+		prettyprogress.WithAnimationFrameTicker(time.NewTicker(200*time.Millisecond).C),
+		prettyprogress.WithBullets(
+			bullets,
+		),
+	)
 
 	usersStep := multiStep.AddStep("Retrieving Users", 0)
 	thingsStep := multiStep.AddStep("Retrieving Things", 0)
@@ -121,6 +132,24 @@ func Import14(cfg migrations.Config, logger mf13log.Logger) {
 		TLSVerification: false,
 	}
 
+	w := uilive.New()
+	w.Start()
+	defer w.Stop()
+
+	bullets := ui.AnimatedBulletSet
+	bullets.Running = bullets.Running.WithColor(color.New(color.FgGreen))
+	multiStep := prettyprogress.NewFancyMultistep(
+		w,
+		prettyprogress.WithAnimationFrameTicker(time.NewTicker(200*time.Millisecond).C),
+		prettyprogress.WithBullets(
+			bullets,
+		),
+	)
+
+	thingsStep := multiStep.AddStep("Creating Things", 0)
+	channelsStep := multiStep.AddStep("Creating Channels", 0)
+	connStep := multiStep.AddStep("Creating Connections", 0)
+
 	sdk := mf14sdk.NewSDK(sdkConf)
 	user := mf14sdk.User{
 		Credentials: mf14sdk.Credentials{
@@ -133,18 +162,22 @@ func Import14(cfg migrations.Config, logger mf13log.Logger) {
 		logger.Error(fmt.Sprintf("failed to create token: %v", err))
 	}
 	logger.Debug("created user token")
-	if err := things14.CreateThings(sdk, cfg.UsersConfig13.UsersCSVPath, cfg.ThingsConfig13.ThingsCSVPath, token.AccessToken); err != nil {
+
+	if err := things14.ReadAndCreateThings(sdk, cfg.UsersConfig13.UsersCSVPath, cfg.ThingsConfig13.ThingsCSVPath, token.AccessToken); err != nil {
 		logger.Error(err.Error())
 	}
-	logger.Debug("created things")
-	if err := things14.CreateChannels(sdk, cfg.UsersConfig13.UsersCSVPath, cfg.ThingsConfig13.ChannelsCSVPath, token.AccessToken); err != nil {
+	thingsStep.Complete("Finished Creating Things")
+
+	if err := things14.ReadAndCreateChannels(sdk, cfg.UsersConfig13.UsersCSVPath, cfg.ThingsConfig13.ChannelsCSVPath, token.AccessToken); err != nil {
 		logger.Error(err.Error())
 	}
-	logger.Debug("created channels")
-	if err := things14.CreateConnections(sdk, cfg.ThingsConfig13.ConnectionsCSVPath, token.AccessToken); err != nil {
+	channelsStep.Complete("Finished Creating Channel")
+
+	if err := things14.ReadAndCreateConnections(sdk, cfg.ThingsConfig13.ConnectionsCSVPath, token.AccessToken); err != nil {
 		logger.Error(err.Error())
 	}
-	logger.Debug("created connections")
+	connStep.Complete("Finished Creating Connections")
+
 	logger.Info(fmt.Sprintf("finished importing to version %s", version14))
 }
 

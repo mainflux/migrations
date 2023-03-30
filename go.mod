@@ -62,4 +62,4 @@ require (
 
 replace github.com/mainflux/mainflux/0130 => github.com/mainflux/mainflux v0.0.0-20220415135135-92d8fb99bf82
 
-replace github.com/mainflux/mainflux/pkg/sdk/go/0140 => github.com/rodneyosodo/mainflux/pkg/sdk/go v0.0.0-20230321144058-d764206b0afa
+replace github.com/mainflux/mainflux/pkg/sdk/go/0140 => github.com/rodneyosodo/mainflux/pkg/sdk/go v0.0.0-20230317163628-6067ddd6a2fc
