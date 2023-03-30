@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/jmoiron/sqlx"
 	mf13log "github.com/mainflux/mainflux/logger"
@@ -11,8 +12,9 @@ import (
 	mf13thingspostgres "github.com/mainflux/mainflux/things/postgres"
 	mf13userspostgres "github.com/mainflux/mainflux/users/postgres"
 	"github.com/mainflux/migrations"
-	"github.com/mainflux/migrations/migrate/things"
-	"github.com/mainflux/migrations/migrate/users"
+	things13 "github.com/mainflux/migrations/migrate/things/v13"
+	things14 "github.com/mainflux/migrations/migrate/things/v14"
+	users13 "github.com/mainflux/migrations/migrate/users/v13"
 )
 
 const (
@@ -40,55 +42,74 @@ func Migrate(cfg migrations.Config, logger mf13log.Logger) {
 func Export13(cfg migrations.Config, logger mf13log.Logger) {
 	logger.Info(fmt.Sprintf("starting export from version %s", version13))
 
-	usersDB := connectToUsersDB(cfg.UsersConfig.DBConfig)
+	usersDB := connectToUsersDB(cfg.UsersConfig13.DBConfig)
 	defer usersDB.Close()
 
 	usersDatabase := mf13userspostgres.NewDatabase(usersDB)
 	logger.Debug("connected to users database")
 
-	thingsDB := connectToThingsDB(cfg.ThingsConfig.DBConfig)
+	thingsDB := connectToThingsDB(cfg.ThingsConfig13.DBConfig)
 	defer thingsDB.Close()
 
 	thingsDatabase := mf13thingspostgres.NewDatabase(thingsDB)
 	logger.Debug("connected to things database")
 
-	us, err := users.MFRetrieveUsers(context.Background(), usersDatabase)
-	if err != nil {
-		logger.Error(err.Error())
-	}
-	logger.Debug("retrieved users from database")
-	if err := users.UsersToCSV(cfg.UsersConfig.UsersCSVPath, us.Users); err != nil {
-		logger.Error(err.Error())
-	}
-	logger.Debug("written users to csv file")
+	var wg sync.WaitGroup
+	wg.Add(4)
 
-	ths, err := things.MFRetrieveThings(context.Background(), thingsDatabase)
-	if err != nil {
-		logger.Error(err.Error())
-	}
-	logger.Debug("retrieved things from database")
-	if err := things.ThingsToCSV(cfg.ThingsConfig.ThingsCSVPath, ths.Things); err != nil {
-		logger.Error(err.Error())
-	}
-	logger.Debug("written things to csv file")
-	channels, err := things.MFRetrieveChannels(context.Background(), thingsDatabase)
-	if err != nil {
-		logger.Error(err.Error())
-	}
-	logger.Debug("retrieved channels from database")
-	if err := things.ChannelsToCSV(cfg.ThingsConfig.ChannelsCSVPath, channels.Channels); err != nil {
-		logger.Error(err.Error())
-	}
-	logger.Debug("written channels to csv file")
-	connections, err := things.MFRetrieveConnections(context.Background(), thingsDatabase)
-	if err != nil {
-		logger.Error(err.Error())
-	}
-	logger.Debug("retrieved connections from database")
-	if err := things.ConnectionsToCSV(cfg.ThingsConfig.ConnectionsCSVPath, connections.Connections); err != nil {
-		logger.Error(err.Error())
-	}
-	logger.Debug("written connections to csv file")
+	go func() {
+		us, err := users13.RetrieveUsers(context.Background(), usersDatabase)
+		if err != nil {
+			logger.Error(err.Error())
+		}
+		logger.Debug("retrieved users from database")
+		if err := users13.UsersToCSV(cfg.UsersConfig13.UsersCSVPath, us.Users); err != nil {
+			logger.Error(err.Error())
+		}
+		logger.Debug("written users to csv file")
+		defer wg.Done()
+	}()
+
+	go func() {
+		ths, err := things13.RetrieveThings(context.Background(), thingsDatabase)
+		if err != nil {
+			logger.Error(err.Error())
+		}
+		logger.Debug("retrieved things from database")
+		if err := things13.ThingsToCSV(cfg.ThingsConfig13.ThingsCSVPath, ths.Things); err != nil {
+			logger.Error(err.Error())
+		}
+		logger.Debug("written things to csv file")
+		defer wg.Done()
+	}()
+
+	go func() {
+		channels, err := things13.RetrieveChannels(context.Background(), thingsDatabase)
+		if err != nil {
+			logger.Error(err.Error())
+		}
+		logger.Debug("retrieved channels from database")
+		if err := things13.ChannelsToCSV(cfg.ThingsConfig13.ChannelsCSVPath, channels.Channels); err != nil {
+			logger.Error(err.Error())
+		}
+		logger.Debug("written channels to csv file")
+		defer wg.Done()
+	}()
+
+	go func() {
+		connections, err := things13.RetrieveConnections(context.Background(), thingsDatabase)
+		if err != nil {
+			logger.Error(err.Error())
+		}
+		logger.Debug("retrieved connections from database")
+		if err := things13.ConnectionsToCSV(cfg.ThingsConfig13.ConnectionsCSVPath, connections.Connections); err != nil {
+			logger.Error(err.Error())
+		}
+		logger.Debug("written connections to csv file")
+		defer wg.Done()
+	}()
+
+	wg.Wait()
 	logger.Info(fmt.Sprintf("finished exporting from version %s", version13))
 }
 
@@ -113,15 +134,15 @@ func Import14(cfg migrations.Config, logger mf13log.Logger) {
 		logger.Error(fmt.Sprintf("failed to create token: %v", err))
 	}
 	logger.Debug("created user token")
-	if err := things.CreateThings(sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ThingsCSVPath, token.AccessToken); err != nil {
+	if err := things14.CreateThings(sdk, cfg.UsersConfig13.UsersCSVPath, cfg.ThingsConfig13.ThingsCSVPath, token.AccessToken); err != nil {
 		logger.Error(err.Error())
 	}
 	logger.Debug("created things")
-	if err := things.CreateChannels(sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ChannelsCSVPath, token.AccessToken); err != nil {
+	if err := things14.CreateChannels(sdk, cfg.UsersConfig13.UsersCSVPath, cfg.ThingsConfig13.ChannelsCSVPath, token.AccessToken); err != nil {
 		logger.Error(err.Error())
 	}
 	logger.Debug("created channels")
-	if err := things.CreateConnections(sdk, cfg.ThingsConfig.ConnectionsCSVPath, token.AccessToken); err != nil {
+	if err := things14.CreateConnections(sdk, cfg.ThingsConfig13.ConnectionsCSVPath, token.AccessToken); err != nil {
 		logger.Error(err.Error())
 	}
 	logger.Debug("created connections")
