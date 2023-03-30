@@ -5,9 +5,12 @@ import (
 	"encoding/csv"
 	"fmt"
 
+	"golang.org/x/sync/errgroup"
+
 	mf13things "github.com/mainflux/mainflux/things"
 	mf13postgres "github.com/mainflux/mainflux/things/postgres"
 	"github.com/mainflux/migrations/internal/util"
+	
 )
 
 var (
@@ -22,69 +25,46 @@ var (
 	retrieveErrString   = "error %v occured at offset: %d and total: %d during %s"
 )
 
+func RetrieveAndWriteThings(ctx context.Context, db mf13postgres.Database, filePath string) error {
+	out := make(chan []mf13things.Thing)
+
+	g := new(errgroup.Group)
+
+	g.Go(func() error {
+		return RetrieveThings(ctx, db, out)
+	})
+	g.Go(func() error {
+		return ThingsToCSV(filePath, out)
+	})
+
+	return g.Wait()
+}
+
 // RetrieveThings retrieves existing things from the database
-func RetrieveThings(ctx context.Context, db mf13postgres.Database) (mf13things.Page, error) {
-	thingsPage, err := dbRetrieveThings(ctx, db, mf13things.PageMetadata{Offset: offset, Limit: limit})
-	if err != nil {
-		return mf13things.Page{}, fmt.Errorf(retrieveErrString, err, offset, limit, retrievThingsOps)
-	}
-	o := limit
-	limit = util.UpdateLimit(thingsPage.Total)
-	for o < thingsPage.Total {
-		ths, err := dbRetrieveThings(ctx, db, mf13things.PageMetadata{Offset: o, Limit: limit})
+func RetrieveThings(ctx context.Context, db mf13postgres.Database, outth chan<- []mf13things.Thing) error {
+	o := offset
+	l := limit
+	for {
+		thingsPage, err := dbRetrieveThings(ctx, db, mf13things.PageMetadata{Offset: o, Limit: l})
 		if err != nil {
-			return mf13things.Page{}, fmt.Errorf(retrieveErrString, err, o, limit, retrievThingsOps)
+			return fmt.Errorf(retrieveErrString, err, o, l, retrievThingsOps)
 		}
-		thingsPage.Things = append(thingsPage.Things, ths.Things...)
-		o = o + limit
-	}
-
-	return thingsPage, nil
-}
-
-// RetrieveChannels retrieves existing channels from the database
-func RetrieveChannels(ctx context.Context, db mf13postgres.Database) (mf13things.ChannelsPage, error) {
-	channelsPage, err := dbRetrieveChannels(ctx, db, mf13things.PageMetadata{Offset: offset, Limit: limit})
-	if err != nil {
-		return mf13things.ChannelsPage{}, fmt.Errorf(retrieveErrString, err, offset, limit, retrievChannelsOps)
-	}
-	o := limit
-	limit = util.UpdateLimit(channelsPage.Total)
-	for o < channelsPage.Total {
-		chs, err := dbRetrieveChannels(ctx, db, mf13things.PageMetadata{Offset: o, Limit: limit})
-		if err != nil {
-			return mf13things.ChannelsPage{}, fmt.Errorf(retrieveErrString, err, o, limit, retrievChannelsOps)
+		outth <- thingsPage.Things
+		if o+l >= thingsPage.Total {
+			break
 		}
-		channelsPage.Channels = append(channelsPage.Channels, chs.Channels...)
-		o = o + limit
-	}
 
-	return channelsPage, nil
-}
-
-// RetrieveConnections retrieves existing things to channels connection from the database
-func RetrieveConnections(ctx context.Context, db mf13postgres.Database) (ConnectionsPage, error) {
-	connectionsPage, err := dbRetrieveConnections(ctx, db, mf13things.PageMetadata{Offset: offset, Limit: limit})
-	if err != nil {
-		return ConnectionsPage{}, fmt.Errorf(retrieveErrString, err, offset, limit, retrievConnOps)
+		o = o + l
+		l = util.UpdateLimit(thingsPage.Total)
 	}
-	o := limit
-	limit = util.UpdateLimit(connectionsPage.Total)
-	for o < connectionsPage.Total {
-		conns, err := dbRetrieveConnections(ctx, db, mf13things.PageMetadata{Offset: o, Limit: limit})
-		if err != nil {
-			return ConnectionsPage{}, fmt.Errorf(retrieveErrString, err, o, limit, retrievConnOps)
-		}
-		connectionsPage.Connections = append(connectionsPage.Connections, conns.Connections...)
-		o = o + limit
-	}
+	close(outth)
+	return nil
 
-	return connectionsPage, nil
 }
 
 // ThingsToCSV saves things to the provided csv file
 // The format of the things csv file is ID,Key,Name,Owner,Metadata
-func ThingsToCSV(filePath string, things []mf13things.Thing) error {
+func ThingsToCSV(filePath string, inth <-chan []mf13things.Thing) error {
 	f, err := util.CreateFile(filePath, writeThingsOps)
 	if err != nil {
 		return err
@@ -92,21 +72,59 @@ func ThingsToCSV(filePath string, things []mf13things.Thing) error {
 	w := csv.NewWriter(f)
 
 	records := [][]string{{"ID", "Key", "Name", "Owner", "Metadata"}}
-	for _, thing := range things {
-		metadata, err := util.MetadataToString(thing.Metadata)
-		if err != nil {
-			return err
+	for things := range inth {
+		for _, thing := range things {
+			metadata, err := util.MetadataToString(thing.Metadata)
+			if err != nil {
+				return err
+			}
+			record := []string{thing.ID, thing.Key, thing.Name, thing.Owner, metadata}
+			records = append(records, record)
 		}
-		record := []string{thing.ID, thing.Key, thing.Name, thing.Owner, metadata}
-		records = append(records, record)
 	}
 
 	return util.WriteData(w, f, records, writeThingsOps)
 }
 
+func RetrieveAndWriteChannels(ctx context.Context, db mf13postgres.Database, filePath string) error {
+	out := make(chan []mf13things.Channel)
+
+	g := new(errgroup.Group)
+
+	g.Go(func() error {
+		return RetrieveChannels(ctx, db, out)
+	})
+	g.Go(func() error {
+		return ChannelsToCSV(filePath, out)
+	})
+
+	return g.Wait()
+}
+
+// RetrieveChannels retrieves existing channels from the database
+func RetrieveChannels(ctx context.Context, db mf13postgres.Database, outch chan<- []mf13things.Channel) error {
+	o := offset
+	l := limit
+	for {
+		channelsPage, err := dbRetrieveChannels(ctx, db, mf13things.PageMetadata{Offset: o, Limit: l})
+		if err != nil {
+			return fmt.Errorf(retrieveErrString, err, o, l, retrievChannelsOps)
+		}
+		outch <- channelsPage.Channels
+		if o+l >= channelsPage.Total {
+			break
+		}
+
+		o = o + l
+		l = util.UpdateLimit(channelsPage.Total)
+	}
+	close(outch)
+	return nil
+}
+
 // ChannelsToCSV saves channels to the provided csv file
 // The format of the channels csv file is ID,Name,Owner,Metadata
-func ChannelsToCSV(filePath string, channels []mf13things.Channel) error {
+func ChannelsToCSV(filePath string, inch <-chan []mf13things.Channel) error {
 	f, err := util.CreateFile(filePath, writeChannelsOps)
 	if err != nil {
 		return err
@@ -115,21 +133,58 @@ func ChannelsToCSV(filePath string, channels []mf13things.Channel) error {
 	w := csv.NewWriter(f)
 
 	records := [][]string{{"ID", "Name", "Owner", "Metadata"}}
-	for _, channel := range channels {
-		metadata, err := util.MetadataToString(channel.Metadata)
-		if err != nil {
-			return err
+	for channels := range inch {
+		for _, channel := range channels {
+			metadata, err := util.MetadataToString(channel.Metadata)
+			if err != nil {
+				return err
+			}
+			record := []string{channel.ID, channel.Name, channel.Owner, metadata}
+			records = append(records, record)
 		}
-		record := []string{channel.ID, channel.Name, channel.Owner, metadata}
-		records = append(records, record)
 	}
-
 	return util.WriteData(w, f, records, writeChannelsOps)
+}
+
+func RetrieveAndWriteConnections(ctx context.Context, db mf13postgres.Database, filePath string) error {
+	out := make(chan []Connection)
+
+	g := new(errgroup.Group)
+
+	g.Go(func() error {
+		return RetrieveConnections(ctx, db, out)
+	})
+	g.Go(func() error {
+		return ConnectionsToCSV(filePath, out)
+	})
+
+	return g.Wait()
+}
+
+// RetrieveConnections retrieves existing things to channels connection from the database
+func RetrieveConnections(ctx context.Context, db mf13postgres.Database, outconn chan<- []Connection) error {
+	o := offset
+	l := limit
+	for {
+		connectionsPage, err := dbRetrieveConnections(ctx, db, mf13things.PageMetadata{Offset: o, Limit: l})
+		if err != nil {
+			return fmt.Errorf(retrieveErrString, err, offset, limit, retrievConnOps)
+		}
+		outconn <- connectionsPage.Connections
+		if o+l >= connectionsPage.Total {
+			break
+		}
+
+		o = o + l
+		l = util.UpdateLimit(connectionsPage.Total)
+	}
+	close(outconn)
+	return nil
 }
 
 // ConnectionsToCSV saves connections to the provided csv file
 // The format of the connections csv file is ChannelID,ChannelOwner,ThingID,ThingOwner
-func ConnectionsToCSV(filePath string, connections []Connection) error {
+func ConnectionsToCSV(filePath string, inconn <-chan []Connection) error {
 	f, err := util.CreateFile(filePath, writeConnectionsOps)
 	if err != nil {
 		return err
@@ -138,10 +193,11 @@ func ConnectionsToCSV(filePath string, connections []Connection) error {
 	w := csv.NewWriter(f)
 
 	records := [][]string{{"ChannelID", "ChannelOwner", "ThingID", "ThingOwner"}}
-	for _, conn := range connections {
-		record := []string{conn.ChannelID, conn.ChannelOwner, conn.ThingID, conn.ThingOwner}
-		records = append(records, record)
+	for connections := range inconn {
+		for _, conn := range connections {
+			record := []string{conn.ChannelID, conn.ChannelOwner, conn.ThingID, conn.ThingOwner}
+			records = append(records, record)
+		}
 	}
-
 	return util.WriteData(w, f, records, writeConnectionsOps)
 }

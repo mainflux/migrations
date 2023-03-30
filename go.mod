@@ -8,6 +8,7 @@ require (
 	github.com/mainflux/mainflux v0.0.0-20220415135135-92d8fb99bf82
 	github.com/mainflux/mainflux/pkg/sdk/go/0140 v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.3.0
+	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 )
 
 require (

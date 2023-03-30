@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"sync"
 
 	"github.com/jmoiron/sqlx"
@@ -25,6 +27,10 @@ const (
 )
 
 func Migrate(cfg migrations.Config, logger mf13log.Logger) {
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
+
 	switch cfg.Operation {
 	case importOp:
 		switch cfg.ToVersion {
@@ -71,12 +77,7 @@ func Export13(cfg migrations.Config, logger mf13log.Logger) {
 	}()
 
 	go func() {
-		ths, err := things13.RetrieveThings(context.Background(), thingsDatabase)
-		if err != nil {
-			logger.Error(err.Error())
-		}
-		logger.Debug("retrieved things from database")
-		if err := things13.ThingsToCSV(cfg.ThingsConfig13.ThingsCSVPath, ths.Things); err != nil {
+		if err := things13.RetrieveAndWriteThings(context.Background(), thingsDatabase, cfg.ThingsConfig13.ThingsCSVPath); err != nil {
 			logger.Error(err.Error())
 		}
 		logger.Debug("written things to csv file")
@@ -84,12 +85,7 @@ func Export13(cfg migrations.Config, logger mf13log.Logger) {
 	}()
 
 	go func() {
-		channels, err := things13.RetrieveChannels(context.Background(), thingsDatabase)
-		if err != nil {
-			logger.Error(err.Error())
-		}
-		logger.Debug("retrieved channels from database")
-		if err := things13.ChannelsToCSV(cfg.ThingsConfig13.ChannelsCSVPath, channels.Channels); err != nil {
+		if err := things13.RetrieveAndWriteChannels(context.Background(), thingsDatabase, cfg.ThingsConfig13.ChannelsCSVPath); err != nil {
 			logger.Error(err.Error())
 		}
 		logger.Debug("written channels to csv file")
@@ -97,12 +93,7 @@ func Export13(cfg migrations.Config, logger mf13log.Logger) {
 	}()
 
 	go func() {
-		connections, err := things13.RetrieveConnections(context.Background(), thingsDatabase)
-		if err != nil {
-			logger.Error(err.Error())
-		}
-		logger.Debug("retrieved connections from database")
-		if err := things13.ConnectionsToCSV(cfg.ThingsConfig13.ConnectionsCSVPath, connections.Connections); err != nil {
+		if err := things13.RetrieveAndWriteConnections(context.Background(), thingsDatabase, cfg.ThingsConfig13.ConnectionsCSVPath); err != nil {
 			logger.Error(err.Error())
 		}
 		logger.Debug("written connections to csv file")
