@@ -7,7 +7,7 @@ import (
 
 	mf13users "github.com/mainflux/mainflux/users"
 	mf13postgres "github.com/mainflux/mainflux/users/postgres"
-	"github.com/mainflux/migrations/internal/util"
+	util "github.com/mainflux/migrations/internal"
 	"golang.org/x/sync/errgroup"
 )
 

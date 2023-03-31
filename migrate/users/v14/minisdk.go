@@ -1,7 +1,7 @@
 package users14
 
 import (
-	"github.com/mainflux/migrations/internal/util"
+	util "github.com/mainflux/migrations/internal"
 )
 
 // GetUserID returns the user ID associated with the email address provided

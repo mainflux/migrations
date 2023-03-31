@@ -16,6 +16,7 @@ const (
 	closeOp           = "close file"
 	retrieveErrString = "error %v occured at offset: %d and total: %d during %s"
 	fileErrString     = "failed to %s with error %v during %s"
+	readErrString     = "error %v occured during %s"
 )
 
 // CreaterDir creates a directory if it doesn't already exist
@@ -40,6 +41,19 @@ func CreateFile(filePath, operation string) (*os.File, error) {
 		return nil, fmt.Errorf(fileErrString, fileOp, err, operation)
 	}
 	return f, nil
+}
+
+// ReadInBatch reads data from from the provided csv file in batches
+func ReadInBatch(filePath, operation string, outth chan<- []string) error {
+	records, err := ReadAllData(filePath)
+	if err != nil {
+		return fmt.Errorf(readErrString, err, operation)
+	}
+	for _, record := range records {
+		outth <- record
+	}
+	close(outth)
+	return nil
 }
 
 // ReadAllData reads data from from the provided csv file
@@ -67,6 +81,7 @@ func ReadAllData(fileName string) ([][]string, error) {
 	return records, nil
 }
 
+// WriteData writes data to the provided csv file
 func WriteData(writer *csv.Writer, file *os.File, records [][]string, operation string) error {
 	if err := writer.WriteAll(records); err != nil {
 		return fmt.Errorf(fileErrString, writeOp, err, operation)

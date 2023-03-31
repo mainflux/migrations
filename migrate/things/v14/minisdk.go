@@ -6,34 +6,22 @@ import (
 	"sync"
 
 	mf14sdk "github.com/mainflux/mainflux/pkg/sdk/go/0140"
-	"github.com/mainflux/migrations/internal/util"
+	util "github.com/mainflux/migrations/internal"
 	users "github.com/mainflux/migrations/migrate/users/v14"
 	"golang.org/x/sync/errgroup"
 )
 
 var (
-	limit         = 100
-	readErrString = "error %v occured during %s"
+	limit = 100
 )
 
-func Read(filePath, operation string, outth chan<- []string) error {
-	records, err := util.ReadAllData(filePath)
-	if err != nil {
-		return fmt.Errorf(readErrString, err, operation)
-	}
-	for _, record := range records {
-		outth <- record
-	}
-	close(outth)
-	return nil
-}
-
+// ReadAndCreateThings reads things from the provided csv file and creates them
 func ReadAndCreateThings(sdk mf14sdk.SDK, usersPath, filePath, token string) error {
 	g := new(errgroup.Group)
 	thchan := make(chan []string, limit)
 
 	g.Go(func() error {
-		return Read(filePath, "creating things", thchan)
+		return util.ReadInBatch(filePath, "creating things", thchan)
 	})
 	g.Go(func() error {
 		return CreateThings(sdk, usersPath, token, thchan)
@@ -92,7 +80,7 @@ func ReadAndCreateChannels(sdk mf14sdk.SDK, usersPath, filePath, token string) e
 	chchan := make(chan []string, limit)
 
 	g.Go(func() error {
-		return Read(filePath, "creating channels", chchan)
+		return util.ReadInBatch(filePath, "creating channels", chchan)
 	})
 	g.Go(func() error {
 		return CreateChannels(sdk, usersPath, token, chchan)
@@ -148,7 +136,7 @@ func ReadAndCreateConnections(sdk mf14sdk.SDK, filePath, token string) error {
 	connchan := make(chan []string, limit)
 
 	g.Go(func() error {
-		return Read(filePath, "creating connections", connchan)
+		return util.ReadInBatch(filePath, "creating connections", connchan)
 	})
 	g.Go(func() error {
 		return CreateConnections(sdk, token, connchan)

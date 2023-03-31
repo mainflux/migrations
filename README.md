@@ -66,7 +66,7 @@ Make sure you have started mainflux deployment with version 0.14.0
 If you want to seed the database from version 0.13.0 you can run
 
 ```bash
-max=50
+max=10
 for i in $(bash -c "echo {1..${max}}"); do ./provision -u testa$i@example.com -p 12345678 --num 50 --prefix seed; done
 ```
 

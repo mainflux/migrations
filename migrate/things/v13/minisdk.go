@@ -9,7 +9,7 @@ import (
 
 	mf13things "github.com/mainflux/mainflux/things"
 	mf13postgres "github.com/mainflux/mainflux/things/postgres"
-	"github.com/mainflux/migrations/internal/util"
+	util "github.com/mainflux/migrations/internal"
 )
 
 var (
@@ -24,6 +24,7 @@ var (
 	retrieveErrString   = "error %v occured at offset: %d and total: %d during %s"
 )
 
+// RetrieveAndWriteThings retrieves existing things from the database and saves them to the provided csv file
 func RetrieveAndWriteThings(ctx context.Context, db mf13postgres.Database, filePath string) error {
 	out := make(chan []mf13things.Thing)
 
@@ -85,6 +86,7 @@ func ThingsToCSV(filePath string, inth <-chan []mf13things.Thing) error {
 	return util.WriteData(w, f, records, writeThingsOps)
 }
 
+// RetrieveAndWriteChannels retrieves existing channels from the database and saves them to the provided csv file
 func RetrieveAndWriteChannels(ctx context.Context, db mf13postgres.Database, filePath string) error {
 	out := make(chan []mf13things.Channel)
 
@@ -145,6 +147,7 @@ func ChannelsToCSV(filePath string, inch <-chan []mf13things.Channel) error {
 	return util.WriteData(w, f, records, writeChannelsOps)
 }
 
+// RetrieveAndWriteConnections retrieves existing things to channels connection from the database and saves them to the provided csv file
 func RetrieveAndWriteConnections(ctx context.Context, db mf13postgres.Database, filePath string) error {
 	out := make(chan []Connection)
 
