@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	// For profiling.
 	_ "net/http/pprof"
 	"sync"
 	"time"
@@ -25,10 +27,11 @@ import (
 )
 
 const (
-	version13 = "0.13.0"
-	version14 = "0.14.0"
-	importOp  = "import"
-	exportOp  = "export"
+	version13       = "0.13.0"
+	version14       = "0.14.0"
+	importOp        = "import"
+	exportOp        = "export"
+	refreshDuration = 200 * time.Millisecond
 )
 
 func Migrate(cfg migrations.Config, logger mf13log.Logger) {
@@ -38,13 +41,11 @@ func Migrate(cfg migrations.Config, logger mf13log.Logger) {
 
 	switch cfg.Operation {
 	case importOp:
-		switch cfg.ToVersion {
-		case version14:
+		if cfg.ToVersion == version14 {
 			Import14(cfg, logger)
 		}
 	case exportOp:
-		switch cfg.FromVersion {
-		case version13:
+		if cfg.FromVersion == version13 {
 			Export13(cfg, logger)
 		}
 	}
@@ -65,15 +66,15 @@ func Export13(cfg migrations.Config, logger mf13log.Logger) {
 	thingsDatabase := mf13thingspostgres.NewDatabase(thingsDB)
 	logger.Debug("connected to things database")
 
-	w := uilive.New()
-	w.Start()
-	defer w.Stop()
+	writer := uilive.New()
+	writer.Start()
+	defer writer.Stop()
 
 	bullets := ui.AnimatedBulletSet
 	bullets.Running = bullets.Running.WithColor(color.New(color.FgGreen))
 	multiStep := prettyprogress.NewFancyMultistep(
-		w,
-		prettyprogress.WithAnimationFrameTicker(time.NewTicker(200*time.Millisecond).C),
+		writer,
+		prettyprogress.WithAnimationFrameTicker(time.NewTicker(refreshDuration).C),
 		prettyprogress.WithBullets(
 			bullets,
 		),
@@ -85,7 +86,8 @@ func Export13(cfg migrations.Config, logger mf13log.Logger) {
 	connStep := multiStep.AddStep("Retrieving Connections", 0)
 
 	var wg sync.WaitGroup
-	wg.Add(4)
+	var numOfJobs = 4
+	wg.Add(numOfJobs)
 
 	go func() {
 		if err := users13.RetrieveAndWriteUsers(context.Background(), usersDatabase, cfg.UsersConfig13.UsersCSVPath); err != nil {
@@ -132,15 +134,15 @@ func Import14(cfg migrations.Config, logger mf13log.Logger) {
 		TLSVerification: false,
 	}
 
-	w := uilive.New()
-	w.Start()
-	defer w.Stop()
+	writer := uilive.New()
+	writer.Start()
+	defer writer.Stop()
 
 	bullets := ui.AnimatedBulletSet
 	bullets.Running = bullets.Running.WithColor(color.New(color.FgGreen))
 	multiStep := prettyprogress.NewFancyMultistep(
-		w,
-		prettyprogress.WithAnimationFrameTicker(time.NewTicker(200*time.Millisecond).C),
+		writer,
+		prettyprogress.WithAnimationFrameTicker(time.NewTicker(refreshDuration).C),
 		prettyprogress.WithBullets(
 			bullets,
 		),
@@ -186,6 +188,7 @@ func connectToThingsDB(dbConfig mf13thingspostgres.Config) *sqlx.DB {
 	if err != nil {
 		log.Fatalf("Failed to connect to things postgres: %s", err)
 	}
+
 	return db
 }
 
@@ -194,5 +197,6 @@ func connectToUsersDB(dbConfig mf13userspostgres.Config) *sqlx.DB {
 	if err != nil {
 		log.Fatalf("Failed to connect to users postgres: %s", err)
 	}
+
 	return db
 }

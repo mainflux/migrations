@@ -16,29 +16,30 @@ var (
 	defaultOffset     = uint64(0)
 	retrievUsersOps   = "retrieving users"
 	writeUsersOps     = "writing users to csv file"
-	retrieveErrString = "error %v occured at offset: %d and total: %d during %s"
+	retrieveErrString = "error %v occurred at offset: %d and total: %d during %s"
 	totalUsersQuery   = "SELECT COUNT(*) FROM users;"
 )
 
-func RetrieveAndWriteUsers(ctx context.Context, db mf13postgres.Database, filePath string) error {
+func RetrieveAndWriteUsers(ctx context.Context, database mf13postgres.Database, filePath string) error {
 	out := make(chan []mf13users.User)
 
-	g, ctx := errgroup.WithContext(ctx)
+	eg, ctx := errgroup.WithContext(ctx)
 
-	g.Go(func() error {
+	eg.Go(func() error {
 		defer close(out)
-		return RetrieveUsers(ctx, db, out)
+
+		return RetrieveUsers(ctx, database, out)
 	})
-	g.Go(func() error {
+	eg.Go(func() error {
 		return UsersToCSV(ctx, filePath, out)
 	})
 
-	return g.Wait()
+	return eg.Wait()
 }
 
-// RetrieveUsers retrieves existing users from the database
-func RetrieveUsers(ctx context.Context, db mf13postgres.Database, allUsers chan<- []mf13users.User) error {
-	totalUsers, err := total(ctx, db, totalUsersQuery, map[string]interface{}{})
+// RetrieveUsers retrieves existing users from the database.
+func RetrieveUsers(ctx context.Context, database mf13postgres.Database, allUsers chan<- []mf13users.User) error {
+	totalUsers, err := total(ctx, database, totalUsersQuery, map[string]interface{}{})
 	if err != nil {
 		return err
 	}
@@ -53,7 +54,7 @@ func RetrieveUsers(ctx context.Context, db mf13postgres.Database, allUsers chan<
 		go func(offset uint64, errCh chan<- error) {
 			defer wg.Done()
 
-			usersPage, err := dbRetrieveUsers(ctx, db, mf13users.PageMetadata{Offset: offset, Limit: limit})
+			usersPage, err := dbRetrieveUsers(ctx, database, mf13users.PageMetadata{Offset: offset, Limit: limit})
 			if err != nil {
 				errCh <- fmt.Errorf(retrieveErrString, err, offset, limit, retrievUsersOps)
 			}
@@ -78,28 +79,29 @@ func RetrieveUsers(ctx context.Context, db mf13postgres.Database, allUsers chan<
 		if offset+limit >= totalUsers {
 			break
 		}
-		offset = offset + limit
+		offset += limit
 	}
 
 	wg.Wait()
+
 	return nil
 }
 
 // UsersToCSV saves users to the provided csv file
-// The format of the users csv file is ID,Email,Password,Metadata
+// The format of the users csv file is ID,Email,Password,Metadata.
 func UsersToCSV(ctx context.Context, filePath string, allUsers <-chan []mf13users.User) error {
-	f, err := util.CreateFile(filePath, writeUsersOps)
+	file, err := util.CreateFile(filePath, writeUsersOps)
 	if err != nil {
 		return err
 	}
 
 	defer func() {
-		if ferr := f.Close(); ferr != nil && err == nil {
+		if ferr := file.Close(); ferr != nil && err == nil {
 			err = ferr
 		}
 	}()
 
-	w := csv.NewWriter(f)
+	w := csv.NewWriter(file)
 
 	records := [][]string{{"ID", "Email", "Password", "Metadata"}}
 	for users := range allUsers {
@@ -113,5 +115,5 @@ func UsersToCSV(ctx context.Context, filePath string, allUsers <-chan []mf13user
 		}
 	}
 
-	return util.WriteData(ctx, w, f, records, writeUsersOps)
+	return util.WriteData(ctx, w, file, records, writeUsersOps)
 }

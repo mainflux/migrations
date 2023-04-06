@@ -36,16 +36,16 @@ type ConnectionsPage struct {
 	Connections []Connection
 }
 
-// dbRetrieveThings retrieves things from the database with the given page navigation parameters
-func dbRetrieveThings(ctx context.Context, db mf13postgres.Database, pm mf13things.PageMetadata) (mf13things.Page, error) {
-	q := `SELECT id, owner, name, key, metadata FROM things LIMIT :limit OFFSET :offset;`
+// dbRetrieveThings retrieves things from the database with the given page navigation parameters.
+func dbRetrieveThings(ctx context.Context, database mf13postgres.Database, pm mf13things.PageMetadata) (mf13things.Page, error) {
+	query := `SELECT id, owner, name, key, metadata FROM things LIMIT :limit OFFSET :offset;`
 
 	params := map[string]interface{}{
 		"limit":  pm.Limit,
 		"offset": pm.Offset,
 	}
 
-	rows, err := db.NamedQueryContext(ctx, q, params)
+	rows, err := database.NamedQueryContext(ctx, query, params)
 	if err != nil {
 		return mf13things.Page{}, mf13errors.Wrap(mf13errors.ErrViewEntity, err)
 	}
@@ -68,7 +68,7 @@ func dbRetrieveThings(ctx context.Context, db mf13postgres.Database, pm mf13thin
 
 	cq := `SELECT COUNT(*) FROM things;`
 
-	total, err := total(ctx, db, cq, params)
+	total, err := total(ctx, database, cq, params)
 	if err != nil {
 		return mf13things.Page{}, mf13errors.Wrap(mf13errors.ErrViewEntity, err)
 	}
@@ -85,16 +85,16 @@ func dbRetrieveThings(ctx context.Context, db mf13postgres.Database, pm mf13thin
 	return page, nil
 }
 
-// dbRetrieveChannels retrieves things from the database with the given page navigation parameters
-func dbRetrieveChannels(ctx context.Context, db mf13postgres.Database, pm mf13things.PageMetadata) (mf13things.ChannelsPage, error) {
-	q := `SELECT id, owner, name, metadata FROM channels LIMIT :limit OFFSET :offset;`
+// dbRetrieveChannels retrieves things from the database with the given page navigation parameters.
+func dbRetrieveChannels(ctx context.Context, database mf13postgres.Database, pm mf13things.PageMetadata) (mf13things.ChannelsPage, error) {
+	query := `SELECT id, owner, name, metadata FROM channels LIMIT :limit OFFSET :offset;`
 
 	params := map[string]interface{}{
 		"limit":  pm.Limit,
 		"offset": pm.Offset,
 	}
 
-	rows, err := db.NamedQueryContext(ctx, q, params)
+	rows, err := database.NamedQueryContext(ctx, query, params)
 	if err != nil {
 		return mf13things.ChannelsPage{}, mf13errors.Wrap(mf13errors.ErrViewEntity, err)
 	}
@@ -117,7 +117,7 @@ func dbRetrieveChannels(ctx context.Context, db mf13postgres.Database, pm mf13th
 
 	cq := `SELECT COUNT(*) FROM channels;`
 
-	total, err := total(ctx, db, cq, params)
+	total, err := total(ctx, database, cq, params)
 	if err != nil {
 		return mf13things.ChannelsPage{}, mf13errors.Wrap(mf13errors.ErrViewEntity, err)
 	}
@@ -134,16 +134,16 @@ func dbRetrieveChannels(ctx context.Context, db mf13postgres.Database, pm mf13th
 	return page, nil
 }
 
-// dbRetrieveConnections retrieves things from the database with the given page navigation parameters
-func dbRetrieveConnections(ctx context.Context, db mf13postgres.Database, pm mf13things.PageMetadata) (ConnectionsPage, error) {
-	q := `SELECT channel_id, channel_owner, thing_id, thing_owner FROM connections LIMIT :limit OFFSET :offset;`
+// dbRetrieveConnections retrieves things from the database with the given page navigation parameters.
+func dbRetrieveConnections(ctx context.Context, database mf13postgres.Database, pm mf13things.PageMetadata) (ConnectionsPage, error) {
+	query := `SELECT channel_id, channel_owner, thing_id, thing_owner FROM connections LIMIT :limit OFFSET :offset;`
 
 	params := map[string]interface{}{
 		"limit":  pm.Limit,
 		"offset": pm.Offset,
 	}
 
-	rows, err := db.NamedQueryContext(ctx, q, params)
+	rows, err := database.NamedQueryContext(ctx, query, params)
 	if err != nil {
 		return ConnectionsPage{}, mf13errors.Wrap(mf13errors.ErrViewEntity, err)
 	}
@@ -156,13 +156,13 @@ func dbRetrieveConnections(ctx context.Context, db mf13postgres.Database, pm mf1
 			return ConnectionsPage{}, mf13errors.Wrap(mf13errors.ErrViewEntity, err)
 		}
 
-		conn := Connection(dbconn)
+		conn := dbconn
 		items = append(items, conn)
 	}
 
 	cq := `SELECT COUNT(*) FROM connections;`
 
-	total, err := total(ctx, db, cq, params)
+	total, err := total(ctx, database, cq, params)
 	if err != nil {
 		return ConnectionsPage{}, mf13errors.Wrap(mf13errors.ErrViewEntity, err)
 	}
@@ -179,8 +179,8 @@ func dbRetrieveConnections(ctx context.Context, db mf13postgres.Database, pm mf1
 	return page, nil
 }
 
-func total(ctx context.Context, db mf13postgres.Database, query string, params interface{}) (uint64, error) {
-	rows, err := db.NamedQueryContext(ctx, query, params)
+func total(ctx context.Context, database mf13postgres.Database, query string, params interface{}) (uint64, error) {
+	rows, err := database.NamedQueryContext(ctx, query, params)
 	if err != nil {
 		return 0, err
 	}
@@ -191,16 +191,18 @@ func total(ctx context.Context, db mf13postgres.Database, query string, params i
 			return 0, err
 		}
 	}
+
 	return total, nil
 }
 
 func toThing(dbth dbThing) (mf13things.Thing, error) {
 	var metadata map[string]interface{}
 	if dbth.Metadata != nil {
-		if err := json.Unmarshal([]byte(dbth.Metadata), &metadata); err != nil {
+		if err := json.Unmarshal(dbth.Metadata, &metadata); err != nil {
 			return mf13things.Thing{}, mf13errors.Wrap(mf13errors.ErrMalformedEntity, err)
 		}
 	}
+
 	return mf13things.Thing{
 		ID:       dbth.ID,
 		Owner:    dbth.Owner,
@@ -213,7 +215,7 @@ func toThing(dbth dbThing) (mf13things.Thing, error) {
 func toChannel(dch dbChannel) (mf13things.Channel, error) {
 	var metadata map[string]interface{}
 	if dch.Metadata != nil {
-		if err := json.Unmarshal([]byte(dch.Metadata), &metadata); err != nil {
+		if err := json.Unmarshal(dch.Metadata, &metadata); err != nil {
 			return mf13things.Channel{}, mf13errors.Wrap(mf13errors.ErrMalformedEntity, err)
 		}
 	}

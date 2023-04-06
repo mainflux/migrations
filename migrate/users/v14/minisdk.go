@@ -8,7 +8,7 @@ const (
 	retrieveUserOps = "retrieving users"
 )
 
-// GetUserID returns the user ID associated with the email address provided
+// GetUserID returns the user ID associated with the email address provided.
 func GetUserID(filePath, email string) string {
 	if email == "" {
 		return ""
@@ -22,5 +22,6 @@ func GetUserID(filePath, email string) string {
 			return record[0]
 		}
 	}
+	
 	return email
 }
