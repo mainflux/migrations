@@ -1,26 +1,29 @@
 package util
 
 import (
+	"context"
 	"encoding/csv"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 )
 
 const (
+	batchSize         = uint8(100)
 	retrievUsersOps   = "retrieving users"
 	writeUsersOps     = "writing users to csv file"
+	openOp            = "open file"
 	writeOp           = "write to file"
+	closeOp           = "close file"
 	dirOp             = "create directory"
 	fileOp            = "create file"
-	closeOp           = "close file"
 	retrieveErrString = "error %v occured at offset: %d and total: %d during %s"
-	fileErrString     = "failed to %s with error %v during %s"
-	readErrString     = "error %v occured during %s"
+	fileErrString     = "failed to %s %s during %s with error : %v "
 )
 
-// CreaterDir creates a directory if it doesn't already exist
-func CreaterDir(path string) error {
+// createrDirectory creates a directory if it doesn't already exist
+func createrDirectory(path string) error {
 	var dir string = filepath.Dir(path)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		if err := os.MkdirAll(dir, 0700); err != nil {
@@ -32,13 +35,13 @@ func CreaterDir(path string) error {
 
 // CreateFile creates a file if it doesn't already exist and opens it
 func CreateFile(filePath, operation string) (*os.File, error) {
-	if err := CreaterDir(filePath); err != nil {
-		return nil, fmt.Errorf(fileErrString, dirOp, err, operation)
+	if err := createrDirectory(filePath); err != nil {
+		return nil, fmt.Errorf(fileErrString, dirOp, filePath, operation, err)
 	}
 
 	f, err := os.Create(filePath)
 	if err != nil {
-		return nil, fmt.Errorf(fileErrString, fileOp, err, operation)
+		return nil, fmt.Errorf(fileErrString, fileOp, filePath, operation, err)
 	}
 	return f, nil
 }
@@ -98,37 +101,44 @@ func ReadInBatch(filePath, operation string, outth chan<- []string) error {
 }
 
 // ReadAllData reads data from from the provided csv file
-func ReadAllData(fileName string) ([][]string, error) {
+func ReadAllData(fileName, operation string) ([][]string, error) {
 	f, err := os.Open(fileName)
 	if err != nil {
 		return [][]string{}, err
 	}
 
+	defer func() {
+		if ferr := f.Close(); ferr != nil && err == nil {
+			err = fmt.Errorf(fileErrString, closeOp, f.Name(), operation, ferr)
+		}
+	}()
+
 	reader := csv.NewReader(f)
 
 	// skip first line
 	if _, err := reader.Read(); err != nil {
-		return [][]string{}, err
+		return [][]string{}, fmt.Errorf("failed to read csv header from file %s: %v", fileName, err)
 	}
 
 	records, err := reader.ReadAll()
 	if err != nil {
-		return [][]string{}, err
+		return [][]string{}, fmt.Errorf("failed to read csv data from file %s: %v", fileName, err)
 	}
 
-	if err := f.Close(); err != nil {
-		return [][]string{}, err
-	}
 	return records, nil
 }
 
 // WriteData writes data to the provided csv file
-func WriteData(writer *csv.Writer, file *os.File, records [][]string, operation string) error {
+func WriteData(ctx context.Context, writer *csv.Writer, file *os.File, records [][]string, operation string) error {
 	if err := writer.WriteAll(records); err != nil {
-		return fmt.Errorf(fileErrString, writeOp, err, operation)
+		return fmt.Errorf(fileErrString, writeOp, file.Name(), operation, err)
 	}
-	if err := file.Close(); err != nil {
-		return fmt.Errorf(fileErrString, closeOp, err, operation)
+	if ctx.Err() != nil {
+		return ctx.Err()
 	}
+	if writer.Error() != nil {
+		return fmt.Errorf("writer error on file %s during %s with error: %v", file.Name(), operation, writer.Error())
+	}
+
 	return nil
 }
