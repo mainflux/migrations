@@ -16,3 +16,6 @@ go.work
 
 # CSV Output
 /csv
+
+# JSON benchmark outputs
+/scripts/*.json
