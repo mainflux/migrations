@@ -45,14 +45,55 @@ func CreateFile(filePath, operation string) (*os.File, error) {
 
 // ReadInBatch reads data from from the provided csv file in batches
 func ReadInBatch(filePath, operation string, outth chan<- []string) error {
-	records, err := ReadAllData(filePath)
+	defer close(outth)
+
+	f, err := os.Open(filePath)
 	if err != nil {
-		return fmt.Errorf(readErrString, err, operation)
+		return fmt.Errorf(fileErrString, openOp, filePath, operation, err)
 	}
-	for _, record := range records {
+
+	defer func() {
+		if ferr := f.Close(); ferr != nil && err == nil {
+			err = fmt.Errorf(fileErrString, closeOp, f.Name(), operation, ferr)
+		}
+	}()
+
+	reader := csv.NewReader(f)
+
+	// skip first line
+	if _, err := reader.Read(); err != nil {
+		return fmt.Errorf("failed to read csv header from file %s during %s: %v", filePath, operation, err)
+	}
+
+	// use a buffered channel to reduce overhead of sending records
+	recordCh := make(chan []string, 100)
+	errCh := make(chan error)
+
+	// use a goroutine to read from the file and send records to the channel
+	go func(errCh chan<- error) {
+		defer close(recordCh)
+		for {
+			record, err := reader.Read()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				errCh <- fmt.Errorf("failed to read csv data from file %s during %s: %v", filePath, operation, err)
+				break
+			}
+			recordCh <- record
+		}
+	}(errCh)
+
+	// read records from the channel and send to output thread
+	for record := range recordCh {
 		outth <- record
 	}
-	close(outth)
+
+	if err := <-errCh; err != nil {
+		return err
+	}
+
 	return nil
 }
 
