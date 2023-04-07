@@ -34,7 +34,7 @@ const (
 	refreshDuration = 200 * time.Millisecond
 )
 
-func Migrate(cfg migrations.Config, logger mf13log.Logger) {
+func Migrate(ctx context.Context, cfg migrations.Config, logger mf13log.Logger) {
 	go func() {
 		log.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
@@ -42,16 +42,16 @@ func Migrate(cfg migrations.Config, logger mf13log.Logger) {
 	switch cfg.Operation {
 	case importOp:
 		if cfg.ToVersion == version14 {
-			Import14(cfg, logger)
+			Import14(ctx, cfg, logger)
 		}
 	case exportOp:
 		if cfg.FromVersion == version13 {
-			Export13(cfg, logger)
+			Export13(ctx, cfg, logger)
 		}
 	}
 }
 
-func Export13(cfg migrations.Config, logger mf13log.Logger) {
+func Export13(ctx context.Context, cfg migrations.Config, logger mf13log.Logger) {
 	logger.Info(fmt.Sprintf("starting export from version %s", version13))
 
 	usersDB := connectToUsersDB(cfg.UsersConfig13.DBConfig)
@@ -90,42 +90,46 @@ func Export13(cfg migrations.Config, logger mf13log.Logger) {
 	wg.Add(numOfJobs)
 
 	go func() {
-		if err := users13.RetrieveAndWriteUsers(context.Background(), usersDatabase, cfg.UsersConfig13.UsersCSVPath); err != nil {
+		defer wg.Done()
+
+		if err := users13.RetrieveAndWriteUsers(ctx, usersDatabase, cfg.UsersConfig13.UsersCSVPath); err != nil {
 			logger.Error(err.Error())
 		}
 		usersStep.Complete("Finished Retrieveing Users")
-		defer wg.Done()
 	}()
 
 	go func() {
-		if err := things13.RetrieveAndWriteThings(context.Background(), thingsDatabase, cfg.ThingsConfig13.ThingsCSVPath); err != nil {
+		defer wg.Done()
+
+		if err := things13.RetrieveAndWriteThings(ctx, thingsDatabase, cfg.ThingsConfig13.ThingsCSVPath); err != nil {
 			logger.Error(err.Error())
 		}
 		thingsStep.Complete("Finished Retrieveing Things")
-		defer wg.Done()
 	}()
 
 	go func() {
-		if err := things13.RetrieveAndWriteChannels(context.Background(), thingsDatabase, cfg.ThingsConfig13.ChannelsCSVPath); err != nil {
+		defer wg.Done()
+
+		if err := things13.RetrieveAndWriteChannels(ctx, thingsDatabase, cfg.ThingsConfig13.ChannelsCSVPath); err != nil {
 			logger.Error(err.Error())
 		}
 		channelsStep.Complete("Finished Retrieveing Channels")
-		defer wg.Done()
 	}()
 
 	go func() {
-		if err := things13.RetrieveAndWriteConnections(context.Background(), thingsDatabase, cfg.ThingsConfig13.ConnectionsCSVPath); err != nil {
+		defer wg.Done()
+
+		if err := things13.RetrieveAndWriteConnections(ctx, thingsDatabase, cfg.ThingsConfig13.ConnectionsCSVPath); err != nil {
 			logger.Error(err.Error())
 		}
 		connStep.Complete("Finished Retrieveing Connection")
-		defer wg.Done()
 	}()
 
 	wg.Wait()
 	logger.Info(fmt.Sprintf("finished exporting from version %s", version13))
 }
 
-func Import14(cfg migrations.Config, logger mf13log.Logger) {
+func Import14(ctx context.Context, cfg migrations.Config, logger mf13log.Logger) {
 	logger.Info(fmt.Sprintf("starting importing to version %s", version14))
 	sdkConf := mf14sdk.Config{
 		ThingsURL:       cfg.ThingsURL,
@@ -165,17 +169,17 @@ func Import14(cfg migrations.Config, logger mf13log.Logger) {
 	}
 	logger.Debug("created user token")
 
-	if err := things14.ReadAndCreateThings(sdk, cfg.UsersConfig13.UsersCSVPath, cfg.ThingsConfig13.ThingsCSVPath, token.AccessToken); err != nil {
+	if err := things14.ReadAndCreateThings(ctx, sdk, cfg.UsersConfig13.UsersCSVPath, cfg.ThingsConfig13.ThingsCSVPath, token.AccessToken); err != nil {
 		logger.Error(err.Error())
 	}
 	thingsStep.Complete("Finished Creating Things")
 
-	if err := things14.ReadAndCreateChannels(sdk, cfg.UsersConfig13.UsersCSVPath, cfg.ThingsConfig13.ChannelsCSVPath, token.AccessToken); err != nil {
+	if err := things14.ReadAndCreateChannels(ctx, sdk, cfg.UsersConfig13.UsersCSVPath, cfg.ThingsConfig13.ChannelsCSVPath, token.AccessToken); err != nil {
 		logger.Error(err.Error())
 	}
 	channelsStep.Complete("Finished Creating Channel")
 
-	if err := things14.ReadAndCreateConnections(sdk, cfg.ThingsConfig13.ConnectionsCSVPath, token.AccessToken); err != nil {
+	if err := things14.ReadAndCreateConnections(ctx, sdk, cfg.ThingsConfig13.ConnectionsCSVPath, token.AccessToken); err != nil {
 		logger.Error(err.Error())
 	}
 	connStep.Complete("Finished Creating Connections")

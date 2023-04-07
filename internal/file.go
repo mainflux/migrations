@@ -49,7 +49,7 @@ func CreateFile(filePath, operation string) (*os.File, error) {
 }
 
 // ReadInBatch reads data from from the provided csv file in batches.
-func ReadInBatch(filePath, operation string, outth chan<- []string) error {
+func ReadInBatch(ctx context.Context, filePath, operation string, outth chan<- []string) error {
 	defer close(outth)
 
 	file, err := os.Open(filePath)
@@ -72,7 +72,7 @@ func ReadInBatch(filePath, operation string, outth chan<- []string) error {
 
 	// use a buffered channel to reduce overhead of sending records
 	recordCh := make(chan []string, batchSize)
-	errCh := make(chan error)
+	errCh := make(chan error, 1)
 
 	// use a goroutine to read from the file and send records to the channel
 	go func(errCh chan<- error) {
@@ -80,6 +80,7 @@ func ReadInBatch(filePath, operation string, outth chan<- []string) error {
 		for {
 			record, err := reader.Read()
 			if errors.Contains(err, io.EOF) {
+				errCh <- nil
 				break
 			}
 			if err != nil {
@@ -96,10 +97,14 @@ func ReadInBatch(filePath, operation string, outth chan<- []string) error {
 		outth <- record
 	}
 
-	if err := <-errCh; err != nil {
-		return err
+	select {
+	case <-ctx.Done():
+		return nil
+	case err := <-errCh:
+		if err != nil {
+			return err
+		}
 	}
-
 	return nil
 }
 
