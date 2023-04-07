@@ -36,17 +36,17 @@ func RetrieveAndWriteThings(ctx context.Context, database mf13postgres.Database,
 	eg.Go(func() error {
 		defer close(out)
 
-		return RetrieveThings(ctx, database, out)
+		return retrieveThings(ctx, database, out)
 	})
 	eg.Go(func() error {
-		return ThingsToCSV(ctx, filePath, out)
+		return thingsToCSV(ctx, filePath, out)
 	})
 
 	return eg.Wait()
 }
 
-// RetrieveThings retrieves existing things from the database.
-func RetrieveThings(ctx context.Context, database mf13postgres.Database, allThings chan<- []mf13things.Thing) error {
+// retrieveThings retrieves existing things from the database.
+func retrieveThings(ctx context.Context, database mf13postgres.Database, allThings chan<- []mf13things.Thing) error {
 	totolThings, err := total(ctx, database, totalThingsQuery, map[string]interface{}{})
 	if err != nil {
 		return err
@@ -96,9 +96,9 @@ func RetrieveThings(ctx context.Context, database mf13postgres.Database, allThin
 	return nil
 }
 
-// ThingsToCSV saves things to the provided csv file
+// thingsToCSV saves things to the provided csv file
 // The format of the things csv file is ID,Key,Name,Owner,Metadata.
-func ThingsToCSV(ctx context.Context, filePath string, allThings <-chan []mf13things.Thing) error {
+func thingsToCSV(ctx context.Context, filePath string, allThings <-chan []mf13things.Thing) error {
 	file, err := util.CreateFile(filePath, writeThingsOps)
 	if err != nil {
 		return err
@@ -135,18 +135,18 @@ func RetrieveAndWriteChannels(ctx context.Context, database mf13postgres.Databas
 
 	eg.Go(func() error {
 		defer close(out)
-		
-		return RetrieveChannels(ctx, database, out)
+
+		return retrieveChannels(ctx, database, out)
 	})
 	eg.Go(func() error {
-		return ChannelsToCSV(ctx, filePath, out)
+		return channelsToCSV(ctx, filePath, out)
 	})
 
 	return eg.Wait()
 }
 
-// RetrieveChannels retrieves existing channels from the database.
-func RetrieveChannels(ctx context.Context, database mf13postgres.Database, allChannels chan<- []mf13things.Channel) error {
+// retrieveChannels retrieves existing channels from the database.
+func retrieveChannels(ctx context.Context, database mf13postgres.Database, allChannels chan<- []mf13things.Channel) error {
 	totolChannels, err := total(ctx, database, totalChannelsQuery, map[string]interface{}{})
 	if err != nil {
 		return err
@@ -192,13 +192,13 @@ func RetrieveChannels(ctx context.Context, database mf13postgres.Database, allCh
 	}
 
 	wg.Wait()
-	
+
 	return nil
 }
 
-// ChannelsToCSV saves channels to the provided csv file
+// channelsToCSV saves channels to the provided csv file
 // The format of the channels csv file is ID,Name,Owner,Metadata.
-func ChannelsToCSV(ctx context.Context, filePath string, allChannels <-chan []mf13things.Channel) error {
+func channelsToCSV(ctx context.Context, filePath string, allChannels <-chan []mf13things.Channel) error {
 	file, err := util.CreateFile(filePath, writeChannelsOps)
 	if err != nil {
 		return err
@@ -235,18 +235,18 @@ func RetrieveAndWriteConnections(ctx context.Context, database mf13postgres.Data
 
 	eg.Go(func() error {
 		defer close(out)
-		
-		return RetrieveConnections(ctx, database, out)
+
+		return retrieveConnections(ctx, database, out)
 	})
 	eg.Go(func() error {
-		return ConnectionsToCSV(ctx, filePath, out)
+		return connectionsToCSV(ctx, filePath, out)
 	})
 
 	return eg.Wait()
 }
 
-// RetrieveConnections retrieves existing things to channels connection from the database.
-func RetrieveConnections(ctx context.Context, database mf13postgres.Database, allConnections chan<- []Connection) error {
+// retrieveConnections retrieves existing things to channels connection from the database.
+func retrieveConnections(ctx context.Context, database mf13postgres.Database, allConnections chan<- []Connection) error {
 	totolConnections, err := total(ctx, database, totalConnectionsQuery, map[string]interface{}{})
 	if err != nil {
 		return err
@@ -291,13 +291,13 @@ func RetrieveConnections(ctx context.Context, database mf13postgres.Database, al
 	}
 
 	wg.Wait()
-	
+
 	return nil
 }
 
-// ConnectionsToCSV saves connections to the provided csv file
+// connectionsToCSV saves connections to the provided csv file
 // The format of the connections csv file is ChannelID,ChannelOwner,ThingID,ThingOwner.
-func ConnectionsToCSV(ctx context.Context, filePath string, inconn <-chan []Connection) error {
+func connectionsToCSV(ctx context.Context, filePath string, inconn <-chan []Connection) error {
 	file, err := util.CreateFile(filePath, writeConnectionsOps)
 	if err != nil {
 		return err

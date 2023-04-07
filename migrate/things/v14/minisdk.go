@@ -1,6 +1,7 @@
 package things14
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"sync"
@@ -14,27 +15,34 @@ import (
 var limit = 100
 
 // ReadAndCreateThings reads things from the provided csv file and creates them.
-func ReadAndCreateThings(sdk mf14sdk.SDK, usersPath, filePath, token string) error {
-	eg := new(errgroup.Group)
+func ReadAndCreateThings(ctx context.Context, sdk mf14sdk.SDK, usersPath, filePath, token string) error {
 	thchan := make(chan []string, limit)
 
+	eg, ctx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
-		return util.ReadInBatch(filePath, "creating things", thchan)
+		return util.ReadInBatch(ctx, filePath, "creating things", thchan)
 	})
 	eg.Go(func() error {
-		return CreateThings(sdk, usersPath, token, thchan)
+		return createThings(ctx, sdk, usersPath, token, thchan)
 	})
 
 	return eg.Wait()
 }
 
-// CreateThings creates things from the provided csv file
+// createThings creates things from the provided csv file
 // The format of the things csv file is ID,Key,Name,Owner,Metadata.
-func CreateThings(sdk mf14sdk.SDK, usersPath, token string, inth <-chan []string) error {
+func createThings(ctx context.Context, sdk mf14sdk.SDK, usersPath, token string, inth <-chan []string) error {
 	ths := []mf14sdk.Thing{}
+	errCh := make(chan error)
 	var wg sync.WaitGroup
 
 	for record := range inth {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+		}
+
 		metadata, err := util.MetadataFromString(record[4])
 		if err != nil {
 			return err
@@ -51,50 +59,82 @@ func CreateThings(sdk mf14sdk.SDK, usersPath, token string, inth <-chan []string
 		}
 		ths = append(ths, thing)
 		if len(ths) >= limit {
+			select {
+			case <-ctx.Done():
+				return nil
+			default:
+			}
+
 			wg.Add(1)
-			go func(things []mf14sdk.Thing) {
-				if _, err := sdk.CreateThings(things, token); err != nil {
-					log.Fatalf("Failed to create things with error %v", err)
-				}
+			go func(things []mf14sdk.Thing, errCh chan<- error) {
 				defer wg.Done()
-			}(ths)
+
+				if _, err := sdk.CreateThings(things, token); err != nil {
+					errCh <- fmt.Errorf("Failed to create things with error %v", err)
+					return
+				}
+
+				errCh <- nil
+			}(ths, errCh)
 			ths = []mf14sdk.Thing{}
 		}
 	}
 
 	// Create remaining things
 	if len(ths) > 0 {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+		}
+
 		if _, err := sdk.CreateThings(ths, token); err != nil {
 			return fmt.Errorf("failed to create things with error %w", err)
 		}
 	}
 
-	wg.Wait()
+	go func() {
+		wg.Wait()
+		close(errCh)
+	}()
+
+	for err := range errCh {
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
 
-func ReadAndCreateChannels(sdk mf14sdk.SDK, usersPath, filePath, token string) error {
-	eg := new(errgroup.Group)
+func ReadAndCreateChannels(ctx context.Context, sdk mf14sdk.SDK, usersPath, filePath, token string) error {
 	chchan := make(chan []string, limit)
 
+	eg, ctx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
-		return util.ReadInBatch(filePath, "creating channels", chchan)
+		return util.ReadInBatch(ctx, filePath, "creating channels", chchan)
 	})
 	eg.Go(func() error {
-		return CreateChannels(sdk, usersPath, token, chchan)
+		return createChannels(ctx, sdk, usersPath, token, chchan)
 	})
 
 	return eg.Wait()
 }
 
-// CreateChannels creates channels from the provided csv file
+// createChannels creates channels from the provided csv file
 // The format of the channels csv file is ID,Name,Owner,Metadata.
-func CreateChannels(sdk mf14sdk.SDK, usersPath, token string, inch <-chan []string) error {
+func createChannels(ctx context.Context, sdk mf14sdk.SDK, usersPath, token string, inch <-chan []string) error {
 	chs := []mf14sdk.Channel{}
+	errCh := make(chan error)
 	var wg sync.WaitGroup
 
 	for record := range inch {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+		}
+
 		metadata, err := util.MetadataFromString(record[3])
 		if err != nil {
 			return err
@@ -108,47 +148,73 @@ func CreateChannels(sdk mf14sdk.SDK, usersPath, token string, inch <-chan []stri
 		}
 		chs = append(chs, channel)
 		if len(chs) >= limit {
+			select {
+			case <-ctx.Done():
+				return nil
+			default:
+			}
+
 			wg.Add(1)
-			go func(channels []mf14sdk.Channel) {
-				if _, err := sdk.CreateChannels(channels, token); err != nil {
-					log.Fatalf("Failed to create things with error %v", err)
-				}
+			go func(channels []mf14sdk.Channel, errCh chan<- error) {
 				defer wg.Done()
-			}(chs)
+
+				if _, err := sdk.CreateChannels(channels, token); err != nil {
+					errCh <- fmt.Errorf("Failed to create things with error %v", err)
+					return
+				}
+
+				errCh <- nil
+
+			}(chs, errCh)
 			chs = []mf14sdk.Channel{}
 		}
 	}
 
 	// Create remaining channels
 	if len(chs) > 0 {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+		}
+
 		if _, err := sdk.CreateChannels(chs, token); err != nil {
 			return fmt.Errorf("failed to create channels with error %w", err)
 		}
 	}
 
-	wg.Wait()
+	go func() {
+		wg.Wait()
+		close(errCh)
+	}()
+
+	for err := range errCh {
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
 
-func ReadAndCreateConnections(sdk mf14sdk.SDK, filePath, token string) error {
-	eg := new(errgroup.Group)
+func ReadAndCreateConnections(ctx context.Context, sdk mf14sdk.SDK, filePath, token string) error {
 	connchan := make(chan []string, limit)
 
+	eg, ctx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
-		return util.ReadInBatch(filePath, "creating connections", connchan)
+		return util.ReadInBatch(ctx, filePath, "creating connections", connchan)
 	})
 	eg.Go(func() error {
-		return CreateConnections(sdk, token, connchan)
+		return createConnections(sdk, token, connchan)
 	})
 
 	return eg.Wait()
 }
 
-// CreateConnections creates policies for things to read and write to the
+// createConnections creates policies for things to read and write to the
 // specified channels. The format of the connections csv file is
 // ChannelID,ChannelOwner,ThingID,ThingOwner.
-func CreateConnections(sdk mf14sdk.SDK, token string, inconn <-chan []string) error {
+func createConnections(sdk mf14sdk.SDK, token string, inconn <-chan []string) error {
 	thingIDsByChannelID := make(map[string][]string)
 	for record := range inconn {
 		channelID := record[0]
