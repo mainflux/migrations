@@ -81,6 +81,7 @@ func ReadInBatch(ctx context.Context, filePath, operation string, outth chan<- [
 			record, err := reader.Read()
 			if errors.Contains(err, io.EOF) {
 				errCh <- nil
+
 				break
 			}
 			if err != nil {
@@ -105,6 +106,7 @@ func ReadInBatch(ctx context.Context, filePath, operation string, outth chan<- [
 			return err
 		}
 	}
+
 	return nil
 }
 

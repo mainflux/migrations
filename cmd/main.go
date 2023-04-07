@@ -43,6 +43,6 @@ func main() {
 	rootCmd.PersistentFlags().StringVarP(&cfg.Operation, "operation", "o", "export", "export data from an existing mainflux deployment or import data to a new mainflux deployment")
 
 	if err := rootCmd.Execute(); err != nil {
-		log.Fatal(err)
+		logger.Error(err.Error())
 	}
 }

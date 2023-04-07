@@ -70,7 +70,8 @@ func createThings(ctx context.Context, sdk mf14sdk.SDK, usersPath, token string,
 				defer wg.Done()
 
 				if _, err := sdk.CreateThings(things, token); err != nil {
-					errCh <- fmt.Errorf("Failed to create things with error %v", err)
+					errCh <- fmt.Errorf("Failed to create things with error %w", err)
+
 					return
 				}
 
@@ -159,12 +160,12 @@ func createChannels(ctx context.Context, sdk mf14sdk.SDK, usersPath, token strin
 				defer wg.Done()
 
 				if _, err := sdk.CreateChannels(channels, token); err != nil {
-					errCh <- fmt.Errorf("Failed to create things with error %v", err)
+					errCh <- fmt.Errorf("Failed to create things with error %w", err)
+
 					return
 				}
 
 				errCh <- nil
-
 			}(chs, errCh)
 			chs = []mf14sdk.Channel{}
 		}
