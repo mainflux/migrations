@@ -24,23 +24,26 @@ TC_PREFIX="seed"
 # Migration command
 MIGRATION_COMMAND="$1"
 
+# Operation. It can be import or export
+OPERATION=""
+
+# Hyperfine prepare command on import
+HYPERFINE_PREPARE_IMPORT="echo 'delete from clients; delete from groups; delete from policies;' | docker exec -i mainflux-things-db psql -U mainflux -d things"
+
 # Stop and remove existing Docker Compose project and volumes
 function stop_and_remove_docker_compose() {
-    printf "Stopping Docker Compose...\n"
     docker-compose -f "$DOCKER_COMPOSE_FILE" down --remove-orphans > /dev/null 2>&1
     docker volume rm $(docker volume ls -qf "name=docker_mainflux-*") > /dev/null 2>&1
 }
 
 # Start docker compose and waits for 2 seconds
 function start_docker_compose() {
-    printf "Starting Docker Compose...\n"
     docker-compose -f "$DOCKER_COMPOSE_FILE" up -d > /dev/null 2>&1
     sleep "$WAIT_TIME"
 }
 
 # Provision users and things on mainflux
 function provision() {
-    printf "Provisioning %d users, %d things and %d channels on Mainflux...\n" "$1" "$2" "$2"
     local maxusers=$1
     local maxthings=$2
     for i in $(seq 1 $maxusers); do
@@ -54,21 +57,58 @@ function benchmark_migrate() {
     hyperfine --runs 10 --export-json "$output_file" "$MIGRATION_COMMAND"> /dev/null 2>&1
 }
 
+function benchmark_migrate() {
+    local output_file=$1
+    local filename=$(basename $output_file)
+    local prefix_filename="${output_file%/*}/$OPERATION$filename"
+
+    if [[ "$OPERATION" == "export" ]]; then
+        hyperfine --runs 10 --export-json "$prefix_filename" "$MIGRATION_COMMAND" > /dev/null 2>&1  
+    elif [[ "$OPERATION" == "import" ]]; then
+        hyperfine --runs 10 --export-json "$prefix_filename" --prepare "$HYPERFINE_PREPARE_IMPORT" "$MIGRATION_COMMAND" > /dev/null 2>&1
+    fi
+}
+
 # Run the script
 function run_script() {
     local -r max_users="$1"
     local -r max_things="$2"
     local -r output_file="$3"
-    start_docker_compose
-    provision "$max_users" "$max_things"
-    benchmark_migrate "$output_file"
-    stop_and_remove_docker_compose
+    if [[ "$OPERATION" == "export" ]]; then
+        printf "Starting Docker Compose...\n"
+        start_docker_compose
+        printf "Provisioning %d users, %d things and %d channels on Mainflux...\n" "$1" "$2" "$2"
+        provision "$max_users" "$max_things"
+        benchmark_migrate "$output_file"
+        printf "Stopping Docker Compose...\n"
+        stop_and_remove_docker_compose
+    elif [[ "$OPERATION" == "import" ]]; then
+        printf "Starting Docker Compose...\n"
+        export MF_RELEASE_TAG=0.13.0
+        start_docker_compose
+        provision "$max_users" "$max_things"
+        ./build/mainflux-migrate -f 0.13.0 -o export > /dev/null 2>&1
+        stop_and_remove_docker_compose
+        export MF_RELEASE_TAG=latest
+        start_docker_compose
+        printf "Importing %d users, %d things and %d channels on Mainflux...\n" "$1" "$2" "$2"
+        benchmark_migrate "$output_file"
+        printf "Stopping Docker Compose...\n"
+        stop_and_remove_docker_compose
+    fi
 }
 
+# Check if the migration command is provided
 if [[ -z "$MIGRATION_COMMAND" ]]; then
-  echo "Please provide the migration command as an input parameter."
-  echo "Example: ./benchmark.sh \"./build/mainflux-migrate -f 0.13.0 -o export\""
-  exit 1
+    echo "Please provide the migration command as an input parameter."
+    echo "Example: ./benchmark.sh \"./build/mainflux-migrate -f 0.13.0 -o export\""
+    exit 1
+elif echo "$MIGRATION_COMMAND" | grep -q "export"; then
+    OPERATION="export"
+elif echo "$MIGRATION_COMMAND" | grep -q "import"; then
+    OPERATION="import"
+else
+  echo "The migration command does not contain the word 'export' or 'import'."  
 fi
 
 # Make sure docker compose is stopped and volumes are removed
