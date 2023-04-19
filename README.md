@@ -1,4 +1,4 @@
-# migrations
+# Migrations
 
 Scripts and tools used to migrate from one version of [mainflux][mainfluxLink] to another.
 
