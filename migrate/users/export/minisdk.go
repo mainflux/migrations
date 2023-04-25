@@ -1,4 +1,4 @@
-package users13
+package export
 
 import (
 	"context"
@@ -6,8 +6,7 @@ import (
 	"fmt"
 	"sync"
 
-	mf13users "github.com/mainflux/mainflux/users"
-	mf13postgres "github.com/mainflux/mainflux/users/postgres"
+	"github.com/mainflux/mainflux/users/postgres" // for version 0.10.0, 0.11.0, 0.12.0 and 0.13.0
 	util "github.com/mainflux/migrations/internal"
 	"golang.org/x/sync/errgroup"
 )
@@ -20,25 +19,26 @@ var (
 	totalUsersQuery   = "SELECT COUNT(*) FROM users;"
 )
 
-func RetrieveAndWriteUsers(ctx context.Context, database mf13postgres.Database, filePath string) error {
-	out := make(chan []mf13users.User)
+// RetrieveAndWriteUsers retrieves existing users from the database and saves them to the provided csv file.
+func RetrieveAndWriteUsers(ctx context.Context, query string, database postgres.Database, filePath string) error {
+	out := make(chan []user)
 
 	eg, ctx := errgroup.WithContext(ctx)
 
 	eg.Go(func() error {
 		defer close(out)
 
-		return RetrieveUsers(ctx, database, out)
+		return retrieveUsers(ctx, query, database, out)
 	})
 	eg.Go(func() error {
-		return UsersToCSV(ctx, filePath, out)
+		return usersToCSV(ctx, filePath, out)
 	})
 
 	return eg.Wait()
 }
 
-// RetrieveUsers retrieves existing users from the database.
-func RetrieveUsers(ctx context.Context, database mf13postgres.Database, allUsers chan<- []mf13users.User) error {
+// retrieveUsers retrieves existing users from the database.
+func retrieveUsers(ctx context.Context, query string, database postgres.Database, allUsers chan<- []user) error {
 	totalUsers, err := total(ctx, database, totalUsersQuery, map[string]interface{}{})
 	if err != nil {
 		return err
@@ -54,7 +54,7 @@ func RetrieveUsers(ctx context.Context, database mf13postgres.Database, allUsers
 		go func(offset uint64, errCh chan<- error) {
 			defer wg.Done()
 
-			usersPage, err := dbRetrieveUsers(ctx, database, mf13users.PageMetadata{Offset: offset, Limit: limit})
+			usersPage, err := dbRetrieveUsers(ctx, query, database, pageMetadata{Offset: offset, Limit: limit})
 			if err != nil {
 				errCh <- fmt.Errorf(retrieveErrString, err, offset, limit, retrievUsersOps)
 			}
@@ -87,9 +87,9 @@ func RetrieveUsers(ctx context.Context, database mf13postgres.Database, allUsers
 	return nil
 }
 
-// UsersToCSV saves users to the provided csv file
+// usersToCSV saves users to the provided csv file
 // The format of the users csv file is ID,Email,Password,Metadata.
-func UsersToCSV(ctx context.Context, filePath string, allUsers <-chan []mf13users.User) error {
+func usersToCSV(ctx context.Context, filePath string, allUsers <-chan []user) error {
 	file, err := util.CreateFile(filePath, writeUsersOps)
 	if err != nil {
 		return err

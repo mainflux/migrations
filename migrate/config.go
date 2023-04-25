@@ -6,8 +6,8 @@ import (
 
 	docker "github.com/fsouza/go-dockerclient"
 	mainflux13 "github.com/mainflux/mainflux"
-	mf13thingspostgres "github.com/mainflux/mainflux/things/postgres"
-	mf13userspostgres "github.com/mainflux/mainflux/users/postgres"
+	thingspostgres "github.com/mainflux/mainflux/things/postgres" // for version 0.10.0, 0.11.0, 0.12.0 and 0.13.0
+	userspostgres "github.com/mainflux/mainflux/users/postgres"   // for version 0.10.0, 0.11.0, 0.12.0 and 0.13.0
 	"github.com/mainflux/migrations"
 )
 
@@ -114,7 +114,7 @@ func LoadConfig() migrations.Config {
 		}
 	}
 
-	tdbConfig := mf13thingspostgres.Config{
+	tdbConfig := thingspostgres.Config{
 		Host:        thingsDBHost,
 		Port:        mainflux13.Env(envThingsDBPort, defThingsDBPort),
 		User:        mainflux13.Env(envThingsDBUser, defThingsDBUser),
@@ -126,7 +126,7 @@ func LoadConfig() migrations.Config {
 		SSLRootCert: mainflux13.Env(envThingsDBSSLRootCert, defThingsDBSSLRootCert),
 	}
 
-	udbConfig := mf13userspostgres.Config{
+	udbConfig := userspostgres.Config{
 		Host:        usersDBHost,
 		Port:        mainflux13.Env(envUsersDBPort, defUsersDBPort),
 		User:        mainflux13.Env(envUsersDBUser, defUsersDBUser),
@@ -138,25 +138,25 @@ func LoadConfig() migrations.Config {
 		SSLRootCert: mainflux13.Env(envUsersDBSSLRootCert, defUsersDBSSLRootCert),
 	}
 
-	thConfig := migrations.ThingsConfig13{
+	thConfig := migrations.ThingsConfig{
 		DBConfig:           tdbConfig,
 		ThingsCSVPath:      mainflux13.Env(envThingsCSVPath, defThingsCSVPath),
 		ChannelsCSVPath:    mainflux13.Env(envChannelsCSVPath, defChannelsCSVPath),
 		ConnectionsCSVPath: mainflux13.Env(envConnectionCSVPath, defConnectionCSVPath),
 	}
 
-	uConfig := migrations.UsersConfig13{
+	uConfig := migrations.UsersConfig{
 		DBConfig:     udbConfig,
 		UsersCSVPath: mainflux13.Env(envUsersCSVPath, defUsersCSVPath),
 	}
 
 	return migrations.Config{
-		LogLevel:       mainflux13.Env(envLogLevel, defLogLevel),
-		ThingsConfig13: thConfig,
-		UsersConfig13:  uConfig,
-		UsersURL:       mainflux13.Env(envUsersURL, defUsersURL),
-		ThingsURL:      mainflux13.Env(envThingsURL, defThingsURL),
-		UserIdentity:   mainflux13.Env(envUserIdentity, defUserIdentity),
-		UserSecret:     mainflux13.Env(envUserSecret, defUserSecret),
+		LogLevel:     mainflux13.Env(envLogLevel, defLogLevel),
+		ThingsConfig: thConfig,
+		UsersConfig:  uConfig,
+		UsersURL:     mainflux13.Env(envUsersURL, defUsersURL),
+		ThingsURL:    mainflux13.Env(envThingsURL, defThingsURL),
+		UserIdentity: mainflux13.Env(envUserIdentity, defUserIdentity),
+		UserSecret:   mainflux13.Env(envUserSecret, defUserSecret),
 	}
 }

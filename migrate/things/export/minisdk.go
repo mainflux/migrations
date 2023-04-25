@@ -1,4 +1,4 @@
-package things13
+package export
 
 import (
 	"context"
@@ -8,8 +8,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	mf13things "github.com/mainflux/mainflux/things"
-	mf13postgres "github.com/mainflux/mainflux/things/postgres"
+	"github.com/mainflux/mainflux/things/postgres" // for version 0.10.0, 0.11.0, 0.12.0 and 0.13.0
 	util "github.com/mainflux/migrations/internal"
 )
 
@@ -28,15 +27,15 @@ var (
 )
 
 // RetrieveAndWriteThings retrieves existing things from the database and saves them to the provided csv file.
-func RetrieveAndWriteThings(ctx context.Context, database mf13postgres.Database, filePath string) error {
-	out := make(chan []mf13things.Thing)
+func RetrieveAndWriteThings(ctx context.Context, query string, database postgres.Database, filePath string) error {
+	out := make(chan []thing)
 
 	eg, ctx := errgroup.WithContext(ctx)
 
 	eg.Go(func() error {
 		defer close(out)
 
-		return retrieveThings(ctx, database, out)
+		return retrieveThings(ctx, query, database, out)
 	})
 	eg.Go(func() error {
 		return thingsToCSV(ctx, filePath, out)
@@ -46,7 +45,7 @@ func RetrieveAndWriteThings(ctx context.Context, database mf13postgres.Database,
 }
 
 // retrieveThings retrieves existing things from the database.
-func retrieveThings(ctx context.Context, database mf13postgres.Database, allThings chan<- []mf13things.Thing) error {
+func retrieveThings(ctx context.Context, query string, database postgres.Database, allThings chan<- []thing) error {
 	totolThings, err := total(ctx, database, totalThingsQuery, map[string]interface{}{})
 	if err != nil {
 		return err
@@ -62,7 +61,7 @@ func retrieveThings(ctx context.Context, database mf13postgres.Database, allThin
 		go func(offset uint64, errCh chan<- error) {
 			defer wg.Done()
 
-			thingsPage, err := dbRetrieveThings(ctx, database, mf13things.PageMetadata{Offset: offset, Limit: limit})
+			thingsPage, err := dbRetrieveThings(ctx, query, database, pageMetadata{Offset: offset, Limit: limit})
 			if err != nil {
 				errCh <- fmt.Errorf(retrieveErrString, err, offset, limit, retrievThingsOps)
 			}
@@ -98,7 +97,7 @@ func retrieveThings(ctx context.Context, database mf13postgres.Database, allThin
 
 // thingsToCSV saves things to the provided csv file
 // The format of the things csv file is ID,Key,Name,Owner,Metadata.
-func thingsToCSV(ctx context.Context, filePath string, allThings <-chan []mf13things.Thing) error {
+func thingsToCSV(ctx context.Context, filePath string, allThings <-chan []thing) error {
 	file, err := util.CreateFile(filePath, writeThingsOps)
 	if err != nil {
 		return err
@@ -128,15 +127,15 @@ func thingsToCSV(ctx context.Context, filePath string, allThings <-chan []mf13th
 }
 
 // RetrieveAndWriteChannels retrieves existing channels from the database and saves them to the provided csv file.
-func RetrieveAndWriteChannels(ctx context.Context, database mf13postgres.Database, filePath string) error {
-	out := make(chan []mf13things.Channel)
+func RetrieveAndWriteChannels(ctx context.Context, query string, database postgres.Database, filePath string) error {
+	out := make(chan []channel)
 
 	eg, ctx := errgroup.WithContext(ctx)
 
 	eg.Go(func() error {
 		defer close(out)
 
-		return retrieveChannels(ctx, database, out)
+		return retrieveChannels(ctx, query, database, out)
 	})
 	eg.Go(func() error {
 		return channelsToCSV(ctx, filePath, out)
@@ -146,7 +145,7 @@ func RetrieveAndWriteChannels(ctx context.Context, database mf13postgres.Databas
 }
 
 // retrieveChannels retrieves existing channels from the database.
-func retrieveChannels(ctx context.Context, database mf13postgres.Database, allChannels chan<- []mf13things.Channel) error {
+func retrieveChannels(ctx context.Context, query string, database postgres.Database, allChannels chan<- []channel) error {
 	totolChannels, err := total(ctx, database, totalChannelsQuery, map[string]interface{}{})
 	if err != nil {
 		return err
@@ -162,7 +161,7 @@ func retrieveChannels(ctx context.Context, database mf13postgres.Database, allCh
 		go func(offset uint64, errCh chan<- error) {
 			defer wg.Done()
 
-			channelsPage, err := dbRetrieveChannels(ctx, database, mf13things.PageMetadata{Offset: offset, Limit: limit})
+			channelsPage, err := dbRetrieveChannels(ctx, query, database, pageMetadata{Offset: offset, Limit: limit})
 			if err != nil {
 				errCh <- fmt.Errorf(retrieveErrString, err, offset, limit, retrievChannelsOps)
 			}
@@ -198,7 +197,7 @@ func retrieveChannels(ctx context.Context, database mf13postgres.Database, allCh
 
 // channelsToCSV saves channels to the provided csv file
 // The format of the channels csv file is ID,Name,Owner,Metadata.
-func channelsToCSV(ctx context.Context, filePath string, allChannels <-chan []mf13things.Channel) error {
+func channelsToCSV(ctx context.Context, filePath string, allChannels <-chan []channel) error {
 	file, err := util.CreateFile(filePath, writeChannelsOps)
 	if err != nil {
 		return err
@@ -228,15 +227,15 @@ func channelsToCSV(ctx context.Context, filePath string, allChannels <-chan []mf
 }
 
 // RetrieveAndWriteConnections retrieves existing things to channels connection from the database and saves them to the provided csv file.
-func RetrieveAndWriteConnections(ctx context.Context, database mf13postgres.Database, filePath string) error {
-	out := make(chan []Connection)
+func RetrieveAndWriteConnections(ctx context.Context, query string, database postgres.Database, filePath string) error {
+	out := make(chan []connection)
 
 	eg, ctx := errgroup.WithContext(ctx)
 
 	eg.Go(func() error {
 		defer close(out)
 
-		return retrieveConnections(ctx, database, out)
+		return retrieveConnections(ctx, query, database, out)
 	})
 	eg.Go(func() error {
 		return connectionsToCSV(ctx, filePath, out)
@@ -246,7 +245,7 @@ func RetrieveAndWriteConnections(ctx context.Context, database mf13postgres.Data
 }
 
 // retrieveConnections retrieves existing things to channels connection from the database.
-func retrieveConnections(ctx context.Context, database mf13postgres.Database, allConnections chan<- []Connection) error {
+func retrieveConnections(ctx context.Context, query string, database postgres.Database, allConnections chan<- []connection) error {
 	totolConnections, err := total(ctx, database, totalConnectionsQuery, map[string]interface{}{})
 	if err != nil {
 		return err
@@ -262,7 +261,7 @@ func retrieveConnections(ctx context.Context, database mf13postgres.Database, al
 		go func(offset uint64, errCh chan<- error) {
 			defer wg.Done()
 
-			connectionsPage, err := dbRetrieveConnections(ctx, database, mf13things.PageMetadata{Offset: offset, Limit: limit})
+			connectionsPage, err := dbRetrieveConnections(ctx, query, database, pageMetadata{Offset: offset, Limit: limit})
 			if err != nil {
 				errCh <- fmt.Errorf(retrieveErrString, err, offset, limit, retrievConnOps)
 			}
@@ -297,7 +296,7 @@ func retrieveConnections(ctx context.Context, database mf13postgres.Database, al
 
 // connectionsToCSV saves connections to the provided csv file
 // The format of the connections csv file is ChannelID,ChannelOwner,ThingID,ThingOwner.
-func connectionsToCSV(ctx context.Context, filePath string, inconn <-chan []Connection) error {
+func connectionsToCSV(ctx context.Context, filePath string, inconn <-chan []connection) error {
 	file, err := util.CreateFile(filePath, writeConnectionsOps)
 	if err != nil {
 		return err

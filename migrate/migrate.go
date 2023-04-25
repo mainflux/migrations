@@ -16,54 +16,97 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/julz/prettyprogress"
 	"github.com/julz/prettyprogress/ui"
-	mf13log "github.com/mainflux/mainflux/logger"
+	"github.com/mainflux/mainflux/logger"
 	mf14sdk "github.com/mainflux/mainflux/pkg/sdk/go/0140"
-	mf13thingspostgres "github.com/mainflux/mainflux/things/postgres"
-	mf13userspostgres "github.com/mainflux/mainflux/users/postgres"
+	thingspostgres "github.com/mainflux/mainflux/things/postgres" // for version 0.10.0, 0.11.0, 0.12.0 and 0.13.0
+	userspostgres "github.com/mainflux/mainflux/users/postgres"   // for version 0.10.0, 0.11.0, 0.12.0 and 0.13.0
 	"github.com/mainflux/migrations"
-	things13 "github.com/mainflux/migrations/migrate/things/v13"
+	exportthings "github.com/mainflux/migrations/migrate/things/export"
 	things14 "github.com/mainflux/migrations/migrate/things/v14"
-	users13 "github.com/mainflux/migrations/migrate/users/v13"
+	exportusers "github.com/mainflux/migrations/migrate/users/export"
 )
 
 const (
-	version13       = "0.13.0"
-	version14       = "0.14.0"
 	importOp        = "import"
 	exportOp        = "export"
 	refreshDuration = 200 * time.Millisecond
+
+	version10 = "0.10.0"
+	version11 = "0.11.0"
+	version12 = "0.12.0"
+	version13 = "0.13.0"
+	version14 = "0.14.0"
 )
 
-func Migrate(ctx context.Context, cfg migrations.Config, logger mf13log.Logger) {
+type retrieveQueries struct {
+	users       string
+	things      string
+	channels    string
+	connections string
+}
+
+var (
+	version10Queries = retrieveQueries{
+		users:       "SELECT email, password, metadata FROM users LIMIT :limit OFFSET :offset;",
+		things:      "SELECT id, owner, name, key, metadata FROM things LIMIT :limit OFFSET :offset;",
+		channels:    "SELECT id, owner, name, metadata FROM channels LIMIT :limit OFFSET :offset;",
+		connections: "SELECT channel_id, channel_owner, thing_id, thing_owner FROM connections LIMIT :limit OFFSET :offset;",
+	}
+
+	version11Queries = version10Queries // same as version 10
+
+	version12Queries = retrieveQueries{
+		users:       "SELECT id, email, password, metadata FROM users LIMIT :limit OFFSET :offset;",
+		things:      version10Queries.things,
+		channels:    version10Queries.channels,
+		connections: version10Queries.connections,
+	}
+
+	version13Queries = version12Queries // same as version 12
+)
+
+var retrieveSQLQueries = map[string]retrieveQueries{
+	version10: version10Queries,
+	version11: version11Queries,
+	version12: version12Queries,
+	version13: version13Queries,
+}
+
+func Migrate(ctx context.Context, cfg migrations.Config, logger logger.Logger) {
 	go func() {
 		log.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
 
 	switch cfg.Operation {
 	case importOp:
-		if cfg.ToVersion == version14 {
+		switch cfg.ToVersion {
+		case version10, version11, version12, version13, version14:
 			Import14(ctx, cfg, logger)
 		}
 	case exportOp:
-		if cfg.FromVersion == version13 {
-			Export13(ctx, cfg, logger)
+		if sqlStatements, ok := retrieveSQLQueries[cfg.FromVersion]; ok {
+			cfg.UsersRetrievalSQL = sqlStatements.users
+			cfg.ThingsRetrievalSQL = sqlStatements.things
+			cfg.ChannelsRetrievalSQL = sqlStatements.channels
+			cfg.ConnectionsRetrievalSQL = sqlStatements.connections
+			Export(ctx, cfg, logger)
 		}
 	}
 }
 
-func Export13(ctx context.Context, cfg migrations.Config, logger mf13log.Logger) {
-	logger.Info(fmt.Sprintf("starting export from version %s", version13))
+func Export(ctx context.Context, cfg migrations.Config, logger logger.Logger) {
+	logger.Info(fmt.Sprintf("starting export from version %s", cfg.FromVersion))
 
-	usersDB := connectToUsersDB(cfg.UsersConfig13.DBConfig)
+	usersDB := connectToUsersDB(cfg.UsersConfig.DBConfig)
 	defer usersDB.Close()
 
-	usersDatabase := mf13userspostgres.NewDatabase(usersDB)
+	usersDatabase := userspostgres.NewDatabase(usersDB)
 	logger.Debug("connected to users database")
 
-	thingsDB := connectToThingsDB(cfg.ThingsConfig13.DBConfig)
+	thingsDB := connectToThingsDB(cfg.ThingsConfig.DBConfig)
 	defer thingsDB.Close()
 
-	thingsDatabase := mf13thingspostgres.NewDatabase(thingsDB)
+	thingsDatabase := thingspostgres.NewDatabase(thingsDB)
 	logger.Debug("connected to things database")
 
 	writer := uilive.New()
@@ -92,7 +135,7 @@ func Export13(ctx context.Context, cfg migrations.Config, logger mf13log.Logger)
 	go func() {
 		defer wg.Done()
 
-		if err := users13.RetrieveAndWriteUsers(ctx, usersDatabase, cfg.UsersConfig13.UsersCSVPath); err != nil {
+		if err := exportusers.RetrieveAndWriteUsers(ctx, cfg.UsersRetrievalSQL, usersDatabase, cfg.UsersConfig.UsersCSVPath); err != nil {
 			logger.Error(err.Error())
 		}
 		usersStep.Complete("Finished Retrieveing Users")
@@ -101,7 +144,7 @@ func Export13(ctx context.Context, cfg migrations.Config, logger mf13log.Logger)
 	go func() {
 		defer wg.Done()
 
-		if err := things13.RetrieveAndWriteThings(ctx, thingsDatabase, cfg.ThingsConfig13.ThingsCSVPath); err != nil {
+		if err := exportthings.RetrieveAndWriteThings(ctx, cfg.ThingsRetrievalSQL, thingsDatabase, cfg.ThingsConfig.ThingsCSVPath); err != nil {
 			logger.Error(err.Error())
 		}
 		thingsStep.Complete("Finished Retrieveing Things")
@@ -110,7 +153,7 @@ func Export13(ctx context.Context, cfg migrations.Config, logger mf13log.Logger)
 	go func() {
 		defer wg.Done()
 
-		if err := things13.RetrieveAndWriteChannels(ctx, thingsDatabase, cfg.ThingsConfig13.ChannelsCSVPath); err != nil {
+		if err := exportthings.RetrieveAndWriteChannels(ctx, cfg.ChannelsRetrievalSQL, thingsDatabase, cfg.ThingsConfig.ChannelsCSVPath); err != nil {
 			logger.Error(err.Error())
 		}
 		channelsStep.Complete("Finished Retrieveing Channels")
@@ -119,7 +162,7 @@ func Export13(ctx context.Context, cfg migrations.Config, logger mf13log.Logger)
 	go func() {
 		defer wg.Done()
 
-		if err := things13.RetrieveAndWriteConnections(ctx, thingsDatabase, cfg.ThingsConfig13.ConnectionsCSVPath); err != nil {
+		if err := exportthings.RetrieveAndWriteConnections(ctx, cfg.ConnectionsRetrievalSQL, thingsDatabase, cfg.ThingsConfig.ConnectionsCSVPath); err != nil {
 			logger.Error(err.Error())
 		}
 		connStep.Complete("Finished Retrieveing Connection")
@@ -129,7 +172,7 @@ func Export13(ctx context.Context, cfg migrations.Config, logger mf13log.Logger)
 	logger.Info(fmt.Sprintf("finished exporting from version %s", version13))
 }
 
-func Import14(ctx context.Context, cfg migrations.Config, logger mf13log.Logger) {
+func Import14(ctx context.Context, cfg migrations.Config, logger logger.Logger) {
 	logger.Info(fmt.Sprintf("starting importing to version %s", version14))
 	sdkConf := mf14sdk.Config{
 		ThingsURL:       cfg.ThingsURL,
@@ -169,17 +212,17 @@ func Import14(ctx context.Context, cfg migrations.Config, logger mf13log.Logger)
 	}
 	logger.Debug("created user token")
 
-	if err := things14.ReadAndCreateThings(ctx, sdk, cfg.UsersConfig13.UsersCSVPath, cfg.ThingsConfig13.ThingsCSVPath, token.AccessToken); err != nil {
+	if err := things14.ReadAndCreateThings(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ThingsCSVPath, token.AccessToken); err != nil {
 		logger.Error(err.Error())
 	}
 	thingsStep.Complete("Finished Creating Things")
 
-	if err := things14.ReadAndCreateChannels(ctx, sdk, cfg.UsersConfig13.UsersCSVPath, cfg.ThingsConfig13.ChannelsCSVPath, token.AccessToken); err != nil {
+	if err := things14.ReadAndCreateChannels(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ChannelsCSVPath, token.AccessToken); err != nil {
 		logger.Error(err.Error())
 	}
 	channelsStep.Complete("Finished Creating Channel")
 
-	if err := things14.ReadAndCreateConnections(ctx, sdk, cfg.ThingsConfig13.ConnectionsCSVPath, token.AccessToken); err != nil {
+	if err := things14.ReadAndCreateConnections(ctx, sdk, cfg.ThingsConfig.ConnectionsCSVPath, token.AccessToken); err != nil {
 		logger.Error(err.Error())
 	}
 	connStep.Complete("Finished Creating Connections")
@@ -187,8 +230,8 @@ func Import14(ctx context.Context, cfg migrations.Config, logger mf13log.Logger)
 	logger.Info(fmt.Sprintf("finished importing to version %s", version14))
 }
 
-func connectToThingsDB(dbConfig mf13thingspostgres.Config) *sqlx.DB {
-	db, err := mf13thingspostgres.Connect(dbConfig)
+func connectToThingsDB(dbConfig thingspostgres.Config) *sqlx.DB {
+	db, err := thingspostgres.Connect(dbConfig)
 	if err != nil {
 		log.Fatalf("Failed to connect to things postgres: %s", err)
 	}
@@ -196,8 +239,8 @@ func connectToThingsDB(dbConfig mf13thingspostgres.Config) *sqlx.DB {
 	return db
 }
 
-func connectToUsersDB(dbConfig mf13userspostgres.Config) *sqlx.DB {
-	db, err := mf13userspostgres.Connect(dbConfig)
+func connectToUsersDB(dbConfig userspostgres.Config) *sqlx.DB {
+	db, err := userspostgres.Connect(dbConfig)
 	if err != nil {
 		log.Fatalf("Failed to connect to users postgres: %s", err)
 	}
