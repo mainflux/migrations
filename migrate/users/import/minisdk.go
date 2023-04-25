@@ -1,4 +1,4 @@
-package users14
+package importusers
 
 import (
 	util "github.com/mainflux/migrations/internal"
@@ -22,6 +22,6 @@ func GetUserID(filePath, email string) string {
 			return record[0]
 		}
 	}
-	
+
 	return email
 }

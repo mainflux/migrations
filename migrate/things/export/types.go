@@ -1,4 +1,4 @@
-package export
+package exportthings
 
 type metadata map[string]interface{}
 

@@ -1,4 +1,4 @@
-package export
+package exportusers
 
 type metadata map[string]interface{}
 
@@ -32,4 +32,3 @@ type dbUser struct {
 	Password string `db:"password"`
 	Metadata []byte `db:"metadata"`
 }
-

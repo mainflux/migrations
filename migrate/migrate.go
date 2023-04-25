@@ -22,7 +22,7 @@ import (
 	userspostgres "github.com/mainflux/mainflux/users/postgres"   // for version 0.10.0, 0.11.0, 0.12.0 and 0.13.0
 	"github.com/mainflux/migrations"
 	exportthings "github.com/mainflux/migrations/migrate/things/export"
-	things14 "github.com/mainflux/migrations/migrate/things/v14"
+	importusers "github.com/mainflux/migrations/migrate/things/import"
 	exportusers "github.com/mainflux/migrations/migrate/users/export"
 )
 
@@ -212,17 +212,17 @@ func Import14(ctx context.Context, cfg migrations.Config, logger logger.Logger) 
 	}
 	logger.Debug("created user token")
 
-	if err := things14.ReadAndCreateThings(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ThingsCSVPath, token.AccessToken); err != nil {
+	if err := importusers.ReadAndCreateThingsv14(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ThingsCSVPath, token.AccessToken); err != nil {
 		logger.Error(err.Error())
 	}
 	thingsStep.Complete("Finished Creating Things")
 
-	if err := things14.ReadAndCreateChannels(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ChannelsCSVPath, token.AccessToken); err != nil {
+	if err := importusers.ReadAndCreateChannelsv14(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ChannelsCSVPath, token.AccessToken); err != nil {
 		logger.Error(err.Error())
 	}
 	channelsStep.Complete("Finished Creating Channel")
 
-	if err := things14.ReadAndCreateConnections(ctx, sdk, cfg.ThingsConfig.ConnectionsCSVPath, token.AccessToken); err != nil {
+	if err := importusers.ReadAndCreateConnectionsv14(ctx, sdk, cfg.ThingsConfig.ConnectionsCSVPath, token.AccessToken); err != nil {
 		logger.Error(err.Error())
 	}
 	connStep.Complete("Finished Creating Connections")

@@ -1,4 +1,4 @@
-package export
+package exportthings
 
 import (
 	"context"
