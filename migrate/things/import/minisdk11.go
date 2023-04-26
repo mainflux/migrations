@@ -6,41 +6,36 @@ import (
 	"log"
 	"sync"
 
-	mf14sdk "github.com/mainflux/mainflux/pkg/sdk/go/0140"
+	mf11sdk "github.com/mainflux/mainflux/sdk/go/0110"
 	"github.com/mainflux/migrations"
 	util "github.com/mainflux/migrations/internal"
-	users "github.com/mainflux/migrations/migrate/users/import"
 	"golang.org/x/sync/errgroup"
 )
 
-var limit = 100
-
-// InitSDKv14 initializes the SDK and creates a token.
-func InitSDKv14(cfg migrations.Config) (mf14sdk.SDK, string, error) {
-	sdkConf := mf14sdk.Config{
-		ThingsURL:       cfg.ThingsURL,
-		UsersURL:        cfg.UsersURL,
-		MsgContentType:  mf14sdk.CTJSONSenML,
+// InitSDKv11 initializes the SDK and creates a token.
+func InitSDKv11(cfg migrations.Config) (mf11sdk.SDK, string, error) {
+	sdkConf := mf11sdk.Config{
+		BaseURL:         cfg.ThingsURL,
+		ThingsPrefix:    "",
+		MsgContentType:  mf11sdk.CTJSONSenML,
 		TLSVerification: false,
 	}
 
-	sdk := mf14sdk.NewSDK(sdkConf)
-	user := mf14sdk.User{
-		Credentials: mf14sdk.Credentials{
-			Identity: cfg.UserIdentity,
-			Secret:   cfg.UserSecret,
-		},
+	sdk := mf11sdk.NewSDK(sdkConf)
+	user := mf11sdk.User{
+		Email:    cfg.UserIdentity,
+		Password: cfg.UserSecret,
 	}
 	token, err := sdk.CreateToken(user)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to create token with error %w", err)
 	}
 
-	return sdk, token.AccessToken, nil
+	return sdk, token, nil
 }
 
-// ReadAndCreateThingsv14 reads things from the provided csv file and creates them.
-func ReadAndCreateThingsv14(ctx context.Context, sdk mf14sdk.SDK, usersPath, filePath, token string) error {
+// ReadAndCreateThingsv11 reads things from the provided csv file and creates them.
+func ReadAndCreateThingsv11(ctx context.Context, sdk mf11sdk.SDK, _, filePath, token string) error {
 	thchan := make(chan []string, limit)
 
 	eg, ctx := errgroup.WithContext(ctx)
@@ -48,16 +43,16 @@ func ReadAndCreateThingsv14(ctx context.Context, sdk mf14sdk.SDK, usersPath, fil
 		return util.ReadInBatch(ctx, filePath, "creating things", thchan)
 	})
 	eg.Go(func() error {
-		return createThingsv14(ctx, sdk, usersPath, token, thchan)
+		return createThingsv11(ctx, sdk, token, thchan)
 	})
 
 	return eg.Wait()
 }
 
-// createThingsv14 creates things from the provided csv file
+// createThingsv11 creates things from the provided csv file
 // The format of the things csv file is ID,Key,Name,Owner,Metadata.
-func createThingsv14(ctx context.Context, sdk mf14sdk.SDK, usersPath, token string, inth <-chan []string) error {
-	ths := []mf14sdk.Thing{}
+func createThingsv11(ctx context.Context, sdk mf11sdk.SDK, token string, inth <-chan []string) error {
+	ths := []mf11sdk.Thing{}
 	errCh := make(chan error)
 	var wg sync.WaitGroup
 
@@ -72,15 +67,11 @@ func createThingsv14(ctx context.Context, sdk mf14sdk.SDK, usersPath, token stri
 		if err != nil {
 			return err
 		}
-		thing := mf14sdk.Thing{
-			ID:    record[0],
-			Name:  record[2],
-			Owner: users.GetUserID(usersPath, record[3]),
-			Credentials: mf14sdk.Credentials{
-				Secret: record[1],
-			},
+		thing := mf11sdk.Thing{
+			ID:       record[0],
+			Name:     record[2],
+			Key:      record[1],
 			Metadata: metadata,
-			Status:   mf14sdk.EnabledStatus,
 		}
 		ths = append(ths, thing)
 		if len(ths) >= limit {
@@ -91,7 +82,7 @@ func createThingsv14(ctx context.Context, sdk mf14sdk.SDK, usersPath, token stri
 			}
 
 			wg.Add(1)
-			go func(things []mf14sdk.Thing, errCh chan<- error) {
+			go func(things []mf11sdk.Thing, errCh chan<- error) {
 				defer wg.Done()
 
 				if _, err := sdk.CreateThings(things, token); err != nil {
@@ -102,7 +93,7 @@ func createThingsv14(ctx context.Context, sdk mf14sdk.SDK, usersPath, token stri
 
 				errCh <- nil
 			}(ths, errCh)
-			ths = []mf14sdk.Thing{}
+			ths = []mf11sdk.Thing{}
 		}
 	}
 
@@ -133,7 +124,8 @@ func createThingsv14(ctx context.Context, sdk mf14sdk.SDK, usersPath, token stri
 	return nil
 }
 
-func ReadAndCreateChannelsv14(ctx context.Context, sdk mf14sdk.SDK, usersPath, filePath, token string) error {
+// ReadAndCreateChannelsv11 reads channels from the provided csv file and creates them.
+func ReadAndCreateChannelsv11(ctx context.Context, sdk mf11sdk.SDK, _, filePath, token string) error {
 	chchan := make(chan []string, limit)
 
 	eg, ctx := errgroup.WithContext(ctx)
@@ -141,16 +133,16 @@ func ReadAndCreateChannelsv14(ctx context.Context, sdk mf14sdk.SDK, usersPath, f
 		return util.ReadInBatch(ctx, filePath, "creating channels", chchan)
 	})
 	eg.Go(func() error {
-		return createChannelsv14(ctx, sdk, usersPath, token, chchan)
+		return createChannelsv11(ctx, sdk, token, chchan)
 	})
 
 	return eg.Wait()
 }
 
-// createChannelsv14 creates channels from the provided csv file
+// createChannelsv11 creates channels from the provided csv file
 // The format of the channels csv file is ID,Name,Owner,Metadata.
-func createChannelsv14(ctx context.Context, sdk mf14sdk.SDK, usersPath, token string, inch <-chan []string) error {
-	chs := []mf14sdk.Channel{}
+func createChannelsv11(ctx context.Context, sdk mf11sdk.SDK, token string, inch <-chan []string) error {
+	chs := []mf11sdk.Channel{}
 	errCh := make(chan error)
 	var wg sync.WaitGroup
 
@@ -165,12 +157,10 @@ func createChannelsv14(ctx context.Context, sdk mf14sdk.SDK, usersPath, token st
 		if err != nil {
 			return err
 		}
-		channel := mf14sdk.Channel{
+		channel := mf11sdk.Channel{
 			ID:       record[0],
 			Name:     record[1],
-			OwnerID:  users.GetUserID(usersPath, record[2]),
 			Metadata: metadata,
-			Status:   mf14sdk.EnabledStatus,
 		}
 		chs = append(chs, channel)
 		if len(chs) >= limit {
@@ -181,7 +171,7 @@ func createChannelsv14(ctx context.Context, sdk mf14sdk.SDK, usersPath, token st
 			}
 
 			wg.Add(1)
-			go func(channels []mf14sdk.Channel, errCh chan<- error) {
+			go func(channels []mf11sdk.Channel, errCh chan<- error) {
 				defer wg.Done()
 
 				if _, err := sdk.CreateChannels(channels, token); err != nil {
@@ -192,7 +182,7 @@ func createChannelsv14(ctx context.Context, sdk mf14sdk.SDK, usersPath, token st
 
 				errCh <- nil
 			}(chs, errCh)
-			chs = []mf14sdk.Channel{}
+			chs = []mf11sdk.Channel{}
 		}
 	}
 
@@ -223,7 +213,8 @@ func createChannelsv14(ctx context.Context, sdk mf14sdk.SDK, usersPath, token st
 	return nil
 }
 
-func ReadAndCreateConnectionsv14(ctx context.Context, sdk mf14sdk.SDK, filePath, token string) error {
+// ReadAndCreateConnectionsv11 reads connections from the database and creates them.
+func ReadAndCreateConnectionsv11(ctx context.Context, sdk mf11sdk.SDK, filePath, token string) error {
 	connchan := make(chan []string, limit)
 
 	eg, ctx := errgroup.WithContext(ctx)
@@ -231,16 +222,16 @@ func ReadAndCreateConnectionsv14(ctx context.Context, sdk mf14sdk.SDK, filePath,
 		return util.ReadInBatch(ctx, filePath, "creating connections", connchan)
 	})
 	eg.Go(func() error {
-		return createConnectionsv14(sdk, token, connchan)
+		return createConnectionsv11(sdk, token, connchan)
 	})
 
 	return eg.Wait()
 }
 
-// createConnectionsv14 creates policies for things to read and write to the
+// createConnectionsv11 creates policies for things to read and write to the
 // specified channels. The format of the connections csv file is
 // ChannelID,ChannelOwner,ThingID,ThingOwner.
-func createConnectionsv14(sdk mf14sdk.SDK, token string, inconn <-chan []string) error {
+func createConnectionsv11(sdk mf11sdk.SDK, token string, inconn <-chan []string) error {
 	thingIDsByChannelID := make(map[string][]string)
 	for record := range inconn {
 		channelID := record[0]
@@ -252,16 +243,16 @@ func createConnectionsv14(sdk mf14sdk.SDK, token string, inconn <-chan []string)
 
 	var wg sync.WaitGroup
 
-	conns := []mf14sdk.ConnectionIDs{}
+	conns := []mf11sdk.ConnectionIDs{}
 	for channelID, thingIDs := range thingIDsByChannelID {
-		conn := mf14sdk.ConnectionIDs{
+		conn := mf11sdk.ConnectionIDs{
 			ChannelIDs: []string{channelID},
 			ThingIDs:   thingIDs,
 		}
 		conns = append(conns, conn)
 		if len(conns) >= limit {
 			wg.Add(1)
-			go func(conns []mf14sdk.ConnectionIDs) {
+			go func(conns []mf11sdk.ConnectionIDs) {
 				for _, conn := range conns {
 					if err := sdk.Connect(conn, token); err != nil {
 						log.Fatalf("failed to connect things %v to channels %s with error %v", conn.ThingIDs, conn.ChannelIDs, err)
@@ -269,7 +260,7 @@ func createConnectionsv14(sdk mf14sdk.SDK, token string, inconn <-chan []string)
 				}
 				defer wg.Done()
 			}(conns)
-			conns = []mf14sdk.ConnectionIDs{}
+			conns = []mf11sdk.ConnectionIDs{}
 		}
 	}
 
@@ -284,15 +275,4 @@ func createConnectionsv14(sdk mf14sdk.SDK, token string, inconn <-chan []string)
 	wg.Wait()
 
 	return nil
-}
-
-// Helper function to check if a thing contains a given element.
-func contains(slice []string, element string) bool {
-	for _, e := range slice {
-		if e == element {
-			return true
-		}
-	}
-
-	return false
 }

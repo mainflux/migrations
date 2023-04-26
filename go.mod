@@ -9,7 +9,11 @@ require (
 	github.com/jmoiron/sqlx v1.3.4
 	github.com/julz/prettyprogress v0.0.0-20191213134954-46101f6567ae
 	github.com/mainflux/mainflux v0.0.0-20220415135135-92d8fb99bf82
+	github.com/mainflux/mainflux/pkg/sdk/go/0120 v0.0.0-00010101000000-000000000000
+	github.com/mainflux/mainflux/pkg/sdk/go/0130 v0.0.0-00010101000000-000000000000
 	github.com/mainflux/mainflux/pkg/sdk/go/0140 v0.0.0-00010101000000-000000000000
+	github.com/mainflux/mainflux/sdk/go/0100 v0.0.0-00010101000000-000000000000
+	github.com/mainflux/mainflux/sdk/go/0110 v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.3.0
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 )
@@ -60,6 +64,11 @@ require (
 	google.golang.org/protobuf v1.28.0 // indirect
 )
 
-replace github.com/mainflux/mainflux/0130 => github.com/mainflux/mainflux v0.0.0-20220415135135-92d8fb99bf82
-
-replace github.com/mainflux/mainflux/pkg/sdk/go/0140 => github.com/rodneyosodo/mainflux/pkg/sdk/go v0.0.0-20230317163628-6067ddd6a2fc
+replace (
+	github.com/mainflux/mainflux/0130 => github.com/mainflux/mainflux v0.0.0-20220415135135-92d8fb99bf82
+	github.com/mainflux/mainflux/pkg/sdk/go/0120 => github.com/rodneyosodo/mainflux/pkg/sdk/go v0.0.0-20230426122212-9899643bd719
+	github.com/mainflux/mainflux/pkg/sdk/go/0130 => github.com/rodneyosodo/mainflux/pkg/sdk/go v0.0.0-20230426122836-7ae32ac3815a
+	github.com/mainflux/mainflux/pkg/sdk/go/0140 => github.com/rodneyosodo/mainflux/pkg/sdk/go v0.0.0-20230317163628-6067ddd6a2fc
+	github.com/mainflux/mainflux/sdk/go/0100 => github.com/rodneyosodo/mainflux/sdk/go v0.0.0-20230426120131-f494ff385908
+	github.com/mainflux/mainflux/sdk/go/0110 => github.com/rodneyosodo/mainflux/sdk/go v0.0.0-20230426121329-d76305f507a5
+)

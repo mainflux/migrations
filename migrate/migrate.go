@@ -17,12 +17,11 @@ import (
 	"github.com/julz/prettyprogress"
 	"github.com/julz/prettyprogress/ui"
 	"github.com/mainflux/mainflux/logger"
-	mf14sdk "github.com/mainflux/mainflux/pkg/sdk/go/0140"
 	thingspostgres "github.com/mainflux/mainflux/things/postgres" // for version 0.10.0, 0.11.0, 0.12.0 and 0.13.0
 	userspostgres "github.com/mainflux/mainflux/users/postgres"   // for version 0.10.0, 0.11.0, 0.12.0 and 0.13.0
 	"github.com/mainflux/migrations"
 	exportthings "github.com/mainflux/migrations/migrate/things/export"
-	importusers "github.com/mainflux/migrations/migrate/things/import"
+	importthings "github.com/mainflux/migrations/migrate/things/import"
 	exportusers "github.com/mainflux/migrations/migrate/users/export"
 )
 
@@ -80,9 +79,13 @@ func Migrate(ctx context.Context, cfg migrations.Config, logger logger.Logger) {
 	switch cfg.Operation {
 	case importOp:
 		switch cfg.ToVersion {
-		case version10, version11, version12, version13, version14:
-			Import14(ctx, cfg, logger)
+		case version10:
+			if sqlStatements, ok := retrieveSQLQueries[cfg.FromVersion]; ok {
+				cfg.ConnectionsRetrievalSQL = sqlStatements.connections
+			}
+		case version11, version12, version13, version14:
 		}
+		Import(ctx, cfg, logger)
 	case exportOp:
 		if sqlStatements, ok := retrieveSQLQueries[cfg.FromVersion]; ok {
 			cfg.UsersRetrievalSQL = sqlStatements.users
@@ -172,14 +175,8 @@ func Export(ctx context.Context, cfg migrations.Config, logger logger.Logger) {
 	logger.Info(fmt.Sprintf("finished exporting from version %s", version13))
 }
 
-func Import14(ctx context.Context, cfg migrations.Config, logger logger.Logger) {
-	logger.Info(fmt.Sprintf("starting importing to version %s", version14))
-	sdkConf := mf14sdk.Config{
-		ThingsURL:       cfg.ThingsURL,
-		UsersURL:        cfg.UsersURL,
-		MsgContentType:  mf14sdk.CTJSONSenML,
-		TLSVerification: false,
-	}
+func Import(ctx context.Context, cfg migrations.Config, logger logger.Logger) {
+	logger.Info(fmt.Sprintf("starting importing to version %s", cfg.ToVersion))
 
 	writer := uilive.New()
 	writer.Start()
@@ -195,45 +192,129 @@ func Import14(ctx context.Context, cfg migrations.Config, logger logger.Logger) 
 		),
 	)
 
-	thingsStep := multiStep.AddStep("Creating Things", 0)
-	channelsStep := multiStep.AddStep("Creating Channels", 0)
-	connStep := multiStep.AddStep("Creating Connections", 0)
+	thingsStep := multiStep.AddStep("creating things", 0)
+	channelsStep := multiStep.AddStep("creating channels", 0)
 
-	sdk := mf14sdk.NewSDK(sdkConf)
-	user := mf14sdk.User{
-		Credentials: mf14sdk.Credentials{
-			Identity: cfg.UserIdentity,
-			Secret:   cfg.UserSecret,
-		},
+	switch cfg.ToVersion {
+	case version10:
+		importVersion10(ctx, cfg, logger, thingsStep, channelsStep)
+
+	case version11:
+		importVersion11(ctx, cfg, logger, thingsStep, channelsStep)
+
+	case version12:
+		importVersion12(ctx, cfg, logger, thingsStep, channelsStep)
+
+	case version13:
+		connStep := multiStep.AddStep("creating connections", 0)
+		importVersion13(ctx, cfg, logger, thingsStep, channelsStep, connStep)
+
+	case version14:
+		connStep := multiStep.AddStep("creating connections", 0)
+		importVersion14(ctx, cfg, logger, thingsStep, channelsStep, connStep)
 	}
-	token, err := sdk.CreateToken(user)
+	logger.Info(fmt.Sprintf("finished importing to version %s", cfg.ToVersion))
+}
+
+func importVersion10(ctx context.Context, cfg migrations.Config, logger logger.Logger, thingsStep *prettyprogress.Step, channelsStep *prettyprogress.Step) {
+	sdk, token, err := importthings.InitSDKv10(cfg)
 	if err != nil {
-		logger.Error(fmt.Sprintf("failed to create token: %v", err))
-	}
-	logger.Debug("created user token")
-
-	if err := importusers.ReadAndCreateThingsv14(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ThingsCSVPath, token.AccessToken); err != nil {
 		logger.Error(err.Error())
 	}
-	thingsStep.Complete("Finished Creating Things")
 
-	if err := importusers.ReadAndCreateChannelsv14(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ChannelsCSVPath, token.AccessToken); err != nil {
+	if err := importthings.ReadAndCreateThingsv10(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ThingsCSVPath, token); err != nil {
 		logger.Error(err.Error())
 	}
-	channelsStep.Complete("Finished Creating Channel")
+	thingsStep.Complete("finished creating things")
 
-	if err := importusers.ReadAndCreateConnectionsv14(ctx, sdk, cfg.ThingsConfig.ConnectionsCSVPath, token.AccessToken); err != nil {
+	if err := importthings.ReadAndCreateChannelsv10(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ChannelsCSVPath, token); err != nil {
 		logger.Error(err.Error())
 	}
-	connStep.Complete("Finished Creating Connections")
+	channelsStep.Complete("finished creating channels")
+}
 
-	logger.Info(fmt.Sprintf("finished importing to version %s", version14))
+func importVersion11(ctx context.Context, cfg migrations.Config, logger logger.Logger, thingsStep *prettyprogress.Step, channelsStep *prettyprogress.Step) {
+	sdk, token, err := importthings.InitSDKv11(cfg)
+	if err != nil {
+		logger.Error(err.Error())
+	}
+
+	if err := importthings.ReadAndCreateThingsv11(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ThingsCSVPath, token); err != nil {
+		logger.Error(err.Error())
+	}
+	thingsStep.Complete("finished creating things")
+
+	if err := importthings.ReadAndCreateChannelsv11(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ChannelsCSVPath, token); err != nil {
+		logger.Error(err.Error())
+	}
+	channelsStep.Complete("finished creating channels")
+}
+
+func importVersion12(ctx context.Context, cfg migrations.Config, logger logger.Logger, thingsStep *prettyprogress.Step, channelsStep *prettyprogress.Step) {
+	sdk, token, err := importthings.InitSDKv12(cfg)
+	if err != nil {
+		logger.Error(err.Error())
+	}
+
+	if err := importthings.ReadAndCreateThingsv12(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ThingsCSVPath, token); err != nil {
+		logger.Error(err.Error())
+	}
+	thingsStep.Complete("finished creating things")
+
+	if err := importthings.ReadAndCreateChannelsv12(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ChannelsCSVPath, token); err != nil {
+		logger.Error(err.Error())
+	}
+	channelsStep.Complete("finished creating channels")
+}
+
+func importVersion13(ctx context.Context, cfg migrations.Config, logger logger.Logger, thingsStep, channelsStep, connStep *prettyprogress.Step) {
+	sdk, token, err := importthings.InitSDKv13(cfg)
+	if err != nil {
+		logger.Error(err.Error())
+	}
+
+	if err := importthings.ReadAndCreateThingsv13(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ThingsCSVPath, token); err != nil {
+		logger.Error(err.Error())
+	}
+	thingsStep.Complete("finished creating things")
+
+	if err := importthings.ReadAndCreateChannelsv13(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ChannelsCSVPath, token); err != nil {
+		logger.Error(err.Error())
+	}
+	channelsStep.Complete("finished creating channels")
+
+	if err := importthings.ReadAndCreateConnectionsv13(ctx, sdk, cfg.ThingsConfig.ConnectionsCSVPath, token); err != nil {
+		logger.Error(err.Error())
+	}
+	connStep.Complete("finished creating connections")
+}
+
+func importVersion14(ctx context.Context, cfg migrations.Config, logger logger.Logger, thingsStep, channelsStep, connStep *prettyprogress.Step) {
+	sdk, token, err := importthings.InitSDKv14(cfg)
+	if err != nil {
+		logger.Error(err.Error())
+	}
+
+	if err := importthings.ReadAndCreateThingsv14(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ThingsCSVPath, token); err != nil {
+		logger.Error(err.Error())
+	}
+	thingsStep.Complete("finished creating things")
+
+	if err := importthings.ReadAndCreateChannelsv14(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ChannelsCSVPath, token); err != nil {
+		logger.Error(err.Error())
+	}
+	channelsStep.Complete("finished creating channels")
+
+	if err := importthings.ReadAndCreateConnectionsv14(ctx, sdk, cfg.ThingsConfig.ConnectionsCSVPath, token); err != nil {
+		logger.Error(err.Error())
+	}
+	connStep.Complete("finished creating connections")
 }
 
 func connectToThingsDB(dbConfig thingspostgres.Config) *sqlx.DB {
 	db, err := thingspostgres.Connect(dbConfig)
 	if err != nil {
-		log.Fatalf("Failed to connect to things postgres: %s", err)
+		log.Fatalf("failed to connect to things postgres: %s", err)
 	}
 
 	return db
@@ -242,7 +323,7 @@ func connectToThingsDB(dbConfig thingspostgres.Config) *sqlx.DB {
 func connectToUsersDB(dbConfig userspostgres.Config) *sqlx.DB {
 	db, err := userspostgres.Connect(dbConfig)
 	if err != nil {
-		log.Fatalf("Failed to connect to users postgres: %s", err)
+		log.Fatalf("failed to connect to users postgres: %s", err)
 	}
 
 	return db
