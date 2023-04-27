@@ -455,14 +455,6 @@ github.com/prometheus/procfs v0.0.2/go.mod h1:TjEm7ze935MbeOT/UhFTIMYKhuLP4wbCsT
 github.com/prometheus/procfs v0.0.8/go.mod h1:7Qr8sr6344vo1JqZ6HhLceV9o3AJ1Ff+GxbHq6oeK9A=
 github.com/rodneyosodo/mainflux/pkg/sdk/go v0.0.0-20230317163628-6067ddd6a2fc h1:JiHEolyOrqVn6rkV78Z7n2o0Y3IjZ4stGAxZ543js+M=
 github.com/rodneyosodo/mainflux/pkg/sdk/go v0.0.0-20230317163628-6067ddd6a2fc/go.mod h1:QgGFEZ03UZgYF1DWfP4PfNsDcX9qAymlujxdDPYShKk=
-github.com/rodneyosodo/mainflux/pkg/sdk/go v0.0.0-20230426122212-9899643bd719 h1:4jw/cROLuwO8wdwv/auHhsEe5NimClZhktIYhSM8vTU=
-github.com/rodneyosodo/mainflux/pkg/sdk/go v0.0.0-20230426122212-9899643bd719/go.mod h1:tqSNCKmLvI/wLCsfGATAPd+dZgDYb/8ioDxz4Yd4oJI=
-github.com/rodneyosodo/mainflux/pkg/sdk/go v0.0.0-20230426122836-7ae32ac3815a h1:J4Ghs/xAfA5TJwVksU2471l82FO3zc98Py/IFVBPBhc=
-github.com/rodneyosodo/mainflux/pkg/sdk/go v0.0.0-20230426122836-7ae32ac3815a/go.mod h1:z5wxJRfv7Jzxh0EY36zT7Vi+GFca4+1xFeOx8G9rt48=
-github.com/rodneyosodo/mainflux/sdk/go v0.0.0-20230426120131-f494ff385908 h1:WKB/ijvx7o0OgySYLQJeWNu26qblTS+7K+SFudG8TvQ=
-github.com/rodneyosodo/mainflux/sdk/go v0.0.0-20230426120131-f494ff385908/go.mod h1:Vf6LcJQ3O/4H6+8tKFuKX8Xo8NEOsM/FS2ar5kDcnIs=
-github.com/rodneyosodo/mainflux/sdk/go v0.0.0-20230426121329-d76305f507a5 h1:IY+SZoSIOP8hwqKrJ1hPsgjerxGJOhSdCWpLUQP7Vzk=
-github.com/rodneyosodo/mainflux/sdk/go v0.0.0-20230426121329-d76305f507a5/go.mod h1:FDvapVgigdF63XQ19KlU4sBlcPt3uZPGqWs1Kt86IIY=
 github.com/rogpeppe/fastuuid v1.2.0/go.mod h1:jVj6XXZzXRy/MSR5jhDC/2q6DgLz+nrA6LYCDYWNEvQ=
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/rogpeppe/go-internal v1.6.1/go.mod h1:xXDCJY+GAPziupqXw64V24skbSoqbTEfhy4qGm1nDQc=

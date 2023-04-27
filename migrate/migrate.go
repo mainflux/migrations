@@ -79,13 +79,12 @@ func Migrate(ctx context.Context, cfg migrations.Config, logger logger.Logger) {
 	switch cfg.Operation {
 	case importOp:
 		switch cfg.ToVersion {
-		case version10:
-			if sqlStatements, ok := retrieveSQLQueries[cfg.FromVersion]; ok {
-				cfg.ConnectionsRetrievalSQL = sqlStatements.connections
-			}
-		case version11, version12, version13, version14:
+		case version14:
+			Import(ctx, cfg, logger)
+		default:
+			logger.Error("we only support importing to version 0.14.0")
 		}
-		Import(ctx, cfg, logger)
+
 	case exportOp:
 		if sqlStatements, ok := retrieveSQLQueries[cfg.FromVersion]; ok {
 			cfg.UsersRetrievalSQL = sqlStatements.users
@@ -194,121 +193,29 @@ func Import(ctx context.Context, cfg migrations.Config, logger logger.Logger) {
 
 	thingsStep := multiStep.AddStep("creating things", 0)
 	channelsStep := multiStep.AddStep("creating channels", 0)
+	connStep := multiStep.AddStep("creating connections", 0)
 
-	switch cfg.ToVersion {
-	case version10:
-		importVersion10(ctx, cfg, logger, thingsStep, channelsStep)
-
-	case version11:
-		importVersion11(ctx, cfg, logger, thingsStep, channelsStep)
-
-	case version12:
-		importVersion12(ctx, cfg, logger, thingsStep, channelsStep)
-
-	case version13:
-		connStep := multiStep.AddStep("creating connections", 0)
-		importVersion13(ctx, cfg, logger, thingsStep, channelsStep, connStep)
-
-	case version14:
-		connStep := multiStep.AddStep("creating connections", 0)
-		importVersion14(ctx, cfg, logger, thingsStep, channelsStep, connStep)
+	sdk, token, err := importthings.InitSDK(cfg)
+	if err != nil {
+		logger.Error(err.Error())
 	}
+
+	if err := importthings.ReadAndCreateThings(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ThingsCSVPath, token); err != nil {
+		logger.Error(err.Error())
+	}
+	thingsStep.Complete("finished creating things")
+
+	if err := importthings.ReadAndCreateChannels(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ChannelsCSVPath, token); err != nil {
+		logger.Error(err.Error())
+	}
+	channelsStep.Complete("finished creating channels")
+
+	if err := importthings.ReadAndCreateConnections(ctx, sdk, cfg.ThingsConfig.ConnectionsCSVPath, token); err != nil {
+		logger.Error(err.Error())
+	}
+	connStep.Complete("finished creating connections")
+
 	logger.Info(fmt.Sprintf("finished importing to version %s", cfg.ToVersion))
-}
-
-func importVersion10(ctx context.Context, cfg migrations.Config, logger logger.Logger, thingsStep *prettyprogress.Step, channelsStep *prettyprogress.Step) {
-	sdk, token, err := importthings.InitSDKv10(cfg)
-	if err != nil {
-		logger.Error(err.Error())
-	}
-
-	if err := importthings.ReadAndCreateThingsv10(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ThingsCSVPath, token); err != nil {
-		logger.Error(err.Error())
-	}
-	thingsStep.Complete("finished creating things")
-
-	if err := importthings.ReadAndCreateChannelsv10(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ChannelsCSVPath, token); err != nil {
-		logger.Error(err.Error())
-	}
-	channelsStep.Complete("finished creating channels")
-}
-
-func importVersion11(ctx context.Context, cfg migrations.Config, logger logger.Logger, thingsStep *prettyprogress.Step, channelsStep *prettyprogress.Step) {
-	sdk, token, err := importthings.InitSDKv11(cfg)
-	if err != nil {
-		logger.Error(err.Error())
-	}
-
-	if err := importthings.ReadAndCreateThingsv11(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ThingsCSVPath, token); err != nil {
-		logger.Error(err.Error())
-	}
-	thingsStep.Complete("finished creating things")
-
-	if err := importthings.ReadAndCreateChannelsv11(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ChannelsCSVPath, token); err != nil {
-		logger.Error(err.Error())
-	}
-	channelsStep.Complete("finished creating channels")
-}
-
-func importVersion12(ctx context.Context, cfg migrations.Config, logger logger.Logger, thingsStep *prettyprogress.Step, channelsStep *prettyprogress.Step) {
-	sdk, token, err := importthings.InitSDKv12(cfg)
-	if err != nil {
-		logger.Error(err.Error())
-	}
-
-	if err := importthings.ReadAndCreateThingsv12(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ThingsCSVPath, token); err != nil {
-		logger.Error(err.Error())
-	}
-	thingsStep.Complete("finished creating things")
-
-	if err := importthings.ReadAndCreateChannelsv12(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ChannelsCSVPath, token); err != nil {
-		logger.Error(err.Error())
-	}
-	channelsStep.Complete("finished creating channels")
-}
-
-func importVersion13(ctx context.Context, cfg migrations.Config, logger logger.Logger, thingsStep, channelsStep, connStep *prettyprogress.Step) {
-	sdk, token, err := importthings.InitSDKv13(cfg)
-	if err != nil {
-		logger.Error(err.Error())
-	}
-
-	if err := importthings.ReadAndCreateThingsv13(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ThingsCSVPath, token); err != nil {
-		logger.Error(err.Error())
-	}
-	thingsStep.Complete("finished creating things")
-
-	if err := importthings.ReadAndCreateChannelsv13(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ChannelsCSVPath, token); err != nil {
-		logger.Error(err.Error())
-	}
-	channelsStep.Complete("finished creating channels")
-
-	if err := importthings.ReadAndCreateConnectionsv13(ctx, sdk, cfg.ThingsConfig.ConnectionsCSVPath, token); err != nil {
-		logger.Error(err.Error())
-	}
-	connStep.Complete("finished creating connections")
-}
-
-func importVersion14(ctx context.Context, cfg migrations.Config, logger logger.Logger, thingsStep, channelsStep, connStep *prettyprogress.Step) {
-	sdk, token, err := importthings.InitSDKv14(cfg)
-	if err != nil {
-		logger.Error(err.Error())
-	}
-
-	if err := importthings.ReadAndCreateThingsv14(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ThingsCSVPath, token); err != nil {
-		logger.Error(err.Error())
-	}
-	thingsStep.Complete("finished creating things")
-
-	if err := importthings.ReadAndCreateChannelsv14(ctx, sdk, cfg.UsersConfig.UsersCSVPath, cfg.ThingsConfig.ChannelsCSVPath, token); err != nil {
-		logger.Error(err.Error())
-	}
-	channelsStep.Complete("finished creating channels")
-
-	if err := importthings.ReadAndCreateConnectionsv14(ctx, sdk, cfg.ThingsConfig.ConnectionsCSVPath, token); err != nil {
-		logger.Error(err.Error())
-	}
-	connStep.Complete("finished creating connections")
 }
 
 func connectToThingsDB(dbConfig thingspostgres.Config) *sqlx.DB {

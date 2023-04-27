@@ -9,11 +9,7 @@ require (
 	github.com/jmoiron/sqlx v1.3.4
 	github.com/julz/prettyprogress v0.0.0-20191213134954-46101f6567ae
 	github.com/mainflux/mainflux v0.0.0-20220415135135-92d8fb99bf82
-	github.com/mainflux/mainflux/pkg/sdk/go/0120 v0.0.0-00010101000000-000000000000
-	github.com/mainflux/mainflux/pkg/sdk/go/0130 v0.0.0-00010101000000-000000000000
 	github.com/mainflux/mainflux/pkg/sdk/go/0140 v0.0.0-00010101000000-000000000000
-	github.com/mainflux/mainflux/sdk/go/0100 v0.0.0-00010101000000-000000000000
-	github.com/mainflux/mainflux/sdk/go/0110 v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.3.0
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 )
