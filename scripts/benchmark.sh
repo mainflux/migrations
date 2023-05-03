@@ -27,6 +27,9 @@ MIGRATION_COMMAND="$1"
 # Operation. It can be import or export
 OPERATION=""
 
+# Version. It can be 0.10.0 or 0.11.0 or 0.12.0 or 0.13.0
+VERSION=""
+
 # Hyperfine prepare command on import
 HYPERFINE_PREPARE_IMPORT="echo 'delete from clients; delete from groups; delete from policies;' | docker exec -i mainflux-things-db psql -U mainflux -d things"
 
@@ -47,20 +50,20 @@ function provision() {
     local maxusers=$1
     local maxthings=$2
     for i in $(seq 1 $maxusers); do
-        ./../mainflux/tools/provision/provision -u "$USER_PREFIX"$i@example.com -p 12345678 --num $maxthings --prefix "$TC_PREFIX"  > /dev/null 2>&1
+        # Check if is version 0.11.0
+        if [[ "$VERSION" == "0.11.0" ]]; then
+            ./../mainflux/tools/provision/provision -u "$USER_PREFIX"$i@example.com -p 12345678 --num $maxthings > /dev/null 2>&1
+        else
+            ./../mainflux/tools/provision/provision -u "$USER_PREFIX"$i@example.com -p 12345678 --num $maxthings --prefix "$TC_PREFIX" > /dev/null 2>&1
+        fi
     done
 }
 
 # Run hyperfine and save results to file
 function benchmark_migrate() {
     local output_file=$1
-    hyperfine --runs 10 --export-json "$output_file" "$MIGRATION_COMMAND"> /dev/null 2>&1
-}
-
-function benchmark_migrate() {
-    local output_file=$1
     local filename=$(basename $output_file)
-    local prefix_filename="${output_file%/*}/$OPERATION$filename"
+    local prefix_filename="${output_file%/*}/$OPERATION$VERSION$filename"
 
     if [[ "$OPERATION" == "export" ]]; then
         hyperfine --runs 10 --export-json "$prefix_filename" "$MIGRATION_COMMAND" > /dev/null 2>&1  
@@ -105,8 +108,32 @@ if [[ -z "$MIGRATION_COMMAND" ]]; then
     exit 1
 elif echo "$MIGRATION_COMMAND" | grep -q "export"; then
     OPERATION="export"
+    if echo "$MIGRATION_COMMAND" | grep -q "0.10.0"; then
+        VERSION="0.10.0"
+    elif echo "$MIGRATION_COMMAND" | grep -q "0.11.0"; then
+        VERSION="0.11.0"
+    elif echo "$MIGRATION_COMMAND" | grep -q "0.12.0"; then
+        VERSION="0.12.0"
+    elif echo "$MIGRATION_COMMAND" | grep -q "0.13.0"; then
+        VERSION="0.13.0"
+    else
+        echo "The migration command does not contain the version 0.10.0 or 0.11.0 or 0.12.0 or 0.13.0."
+        exit 1
+    fi
 elif echo "$MIGRATION_COMMAND" | grep -q "import"; then
     OPERATION="import"
+    if echo "$MIGRATION_COMMAND" | grep -q "0.10.0"; then
+        VERSION="0.10.0"
+    elif echo "$MIGRATION_COMMAND" | grep -q "0.11.0"; then
+        VERSION="0.11.0"
+    elif echo "$MIGRATION_COMMAND" | grep -q "0.12.0"; then
+        VERSION="0.12.0"
+    elif echo "$MIGRATION_COMMAND" | grep -q "0.13.0"; then
+        VERSION="0.13.0"
+    else
+        echo "The migration command does not contain the version 0.10.0 or 0.11.0 or 0.12.0 or 0.13.0."
+        exit 1
+    fi    
 else
   echo "The migration command does not contain the word 'export' or 'import'."  
 fi
