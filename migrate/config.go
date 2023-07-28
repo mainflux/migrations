@@ -5,7 +5,7 @@ import (
 	"log"
 
 	docker "github.com/fsouza/go-dockerclient"
-	mainflux13 "github.com/mainflux/mainflux"
+	"github.com/mainflux/mainflux"
 	thingspostgres "github.com/mainflux/mainflux/things/postgres" // for version 0.10.0, 0.11.0, 0.12.0 and 0.13.0
 	userspostgres "github.com/mainflux/mainflux/users/postgres"   // for version 0.10.0, 0.11.0, 0.12.0 and 0.13.0
 	"github.com/mainflux/migrations"
@@ -78,8 +78,8 @@ const (
 )
 
 func LoadConfig() migrations.Config {
-	thingsContainerName := mainflux13.Env(envThingsDBContainerName, defThingsDBContainerName)
-	thingsContainerNetwork := mainflux13.Env(envThingsDBContainerNetwork, defThingsDBContainerNetwork)
+	thingsContainerName := mainflux.Env(envThingsDBContainerName, defThingsDBContainerName)
+	thingsContainerNetwork := mainflux.Env(envThingsDBContainerNetwork, defThingsDBContainerNetwork)
 
 	client, err := docker.NewClientFromEnv()
 	if err != nil {
@@ -89,15 +89,15 @@ func LoadConfig() migrations.Config {
 	if err != nil {
 		log.Fatalf("failed to list containers with error %v", err)
 	}
-	thingsDBHost := mainflux13.Env(envThingsDBHost, defThingsDBHost)
+	thingsDBHost := mainflux.Env(envThingsDBHost, defThingsDBHost)
 	for _, img := range imgs {
 		if img.Names[0] == fmt.Sprintf("/%s", thingsContainerName) {
 			thingsDBHost = img.Networks.Networks[thingsContainerNetwork].IPAddress
 		}
 	}
 
-	usersContainerName := mainflux13.Env(envUsersDBContainerName, defUsersDBContainerName)
-	usersContainerNetwork := mainflux13.Env(envUsersDBContainerNetwork, defUsersDBContainerNetwork)
+	usersContainerName := mainflux.Env(envUsersDBContainerName, defUsersDBContainerName)
+	usersContainerNetwork := mainflux.Env(envUsersDBContainerNetwork, defUsersDBContainerNetwork)
 
 	client, err = docker.NewClientFromEnv()
 	if err != nil {
@@ -107,7 +107,7 @@ func LoadConfig() migrations.Config {
 	if err != nil {
 		log.Fatalf("failed to list containers with error %v", err)
 	}
-	usersDBHost := mainflux13.Env(envUsersDBHost, defUsersDBHost)
+	usersDBHost := mainflux.Env(envUsersDBHost, defUsersDBHost)
 	for _, img := range imgs {
 		if img.Names[0] == fmt.Sprintf("/%s", usersContainerName) {
 			usersDBHost = img.Networks.Networks[usersContainerNetwork].IPAddress
@@ -116,47 +116,47 @@ func LoadConfig() migrations.Config {
 
 	tdbConfig := thingspostgres.Config{
 		Host:        thingsDBHost,
-		Port:        mainflux13.Env(envThingsDBPort, defThingsDBPort),
-		User:        mainflux13.Env(envThingsDBUser, defThingsDBUser),
-		Pass:        mainflux13.Env(envThingsDBPass, defThingsDBPass),
-		Name:        mainflux13.Env(envThingsDB, defThingsDB),
-		SSLMode:     mainflux13.Env(envThingsDBSSLMode, defThingsDBSSLMode),
-		SSLCert:     mainflux13.Env(envThingsDBSSLCert, defThingsDBSSLCert),
-		SSLKey:      mainflux13.Env(envThingsDBSSLKey, defThingsDBSSLKey),
-		SSLRootCert: mainflux13.Env(envThingsDBSSLRootCert, defThingsDBSSLRootCert),
+		Port:        mainflux.Env(envThingsDBPort, defThingsDBPort),
+		User:        mainflux.Env(envThingsDBUser, defThingsDBUser),
+		Pass:        mainflux.Env(envThingsDBPass, defThingsDBPass),
+		Name:        mainflux.Env(envThingsDB, defThingsDB),
+		SSLMode:     mainflux.Env(envThingsDBSSLMode, defThingsDBSSLMode),
+		SSLCert:     mainflux.Env(envThingsDBSSLCert, defThingsDBSSLCert),
+		SSLKey:      mainflux.Env(envThingsDBSSLKey, defThingsDBSSLKey),
+		SSLRootCert: mainflux.Env(envThingsDBSSLRootCert, defThingsDBSSLRootCert),
 	}
 
 	udbConfig := userspostgres.Config{
 		Host:        usersDBHost,
-		Port:        mainflux13.Env(envUsersDBPort, defUsersDBPort),
-		User:        mainflux13.Env(envUsersDBUser, defUsersDBUser),
-		Pass:        mainflux13.Env(envUsersDBPass, defUsersDBPass),
-		Name:        mainflux13.Env(envUsersDB, defUsersDB),
-		SSLMode:     mainflux13.Env(envUsersDBSSLMode, defUsersDBSSLMode),
-		SSLCert:     mainflux13.Env(envUsersDBSSLCert, defUsersDBSSLCert),
-		SSLKey:      mainflux13.Env(envUsersDBSSLKey, defUsersDBSSLKey),
-		SSLRootCert: mainflux13.Env(envUsersDBSSLRootCert, defUsersDBSSLRootCert),
+		Port:        mainflux.Env(envUsersDBPort, defUsersDBPort),
+		User:        mainflux.Env(envUsersDBUser, defUsersDBUser),
+		Pass:        mainflux.Env(envUsersDBPass, defUsersDBPass),
+		Name:        mainflux.Env(envUsersDB, defUsersDB),
+		SSLMode:     mainflux.Env(envUsersDBSSLMode, defUsersDBSSLMode),
+		SSLCert:     mainflux.Env(envUsersDBSSLCert, defUsersDBSSLCert),
+		SSLKey:      mainflux.Env(envUsersDBSSLKey, defUsersDBSSLKey),
+		SSLRootCert: mainflux.Env(envUsersDBSSLRootCert, defUsersDBSSLRootCert),
 	}
 
 	thConfig := migrations.ThingsConfig{
 		DBConfig:           tdbConfig,
-		ThingsCSVPath:      mainflux13.Env(envThingsCSVPath, defThingsCSVPath),
-		ChannelsCSVPath:    mainflux13.Env(envChannelsCSVPath, defChannelsCSVPath),
-		ConnectionsCSVPath: mainflux13.Env(envConnectionCSVPath, defConnectionCSVPath),
+		ThingsCSVPath:      mainflux.Env(envThingsCSVPath, defThingsCSVPath),
+		ChannelsCSVPath:    mainflux.Env(envChannelsCSVPath, defChannelsCSVPath),
+		ConnectionsCSVPath: mainflux.Env(envConnectionCSVPath, defConnectionCSVPath),
 	}
 
 	uConfig := migrations.UsersConfig{
 		DBConfig:     udbConfig,
-		UsersCSVPath: mainflux13.Env(envUsersCSVPath, defUsersCSVPath),
+		UsersCSVPath: mainflux.Env(envUsersCSVPath, defUsersCSVPath),
 	}
 
 	return migrations.Config{
-		LogLevel:     mainflux13.Env(envLogLevel, defLogLevel),
+		LogLevel:     mainflux.Env(envLogLevel, defLogLevel),
 		ThingsConfig: thConfig,
 		UsersConfig:  uConfig,
-		UsersURL:     mainflux13.Env(envUsersURL, defUsersURL),
-		ThingsURL:    mainflux13.Env(envThingsURL, defThingsURL),
-		UserIdentity: mainflux13.Env(envUserIdentity, defUserIdentity),
-		UserSecret:   mainflux13.Env(envUserSecret, defUserSecret),
+		UsersURL:     mainflux.Env(envUsersURL, defUsersURL),
+		ThingsURL:    mainflux.Env(envThingsURL, defThingsURL),
+		UserIdentity: mainflux.Env(envUserIdentity, defUserIdentity),
+		UserSecret:   mainflux.Env(envUserSecret, defUserSecret),
 	}
 }

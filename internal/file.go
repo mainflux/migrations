@@ -79,17 +79,18 @@ func ReadInBatch(ctx context.Context, filePath, operation string, outth chan<- [
 		defer close(recordCh)
 		for {
 			record, err := reader.Read()
-			if errors.Contains(err, io.EOF) {
+			switch {
+			case errors.Contains(err, io.EOF):
 				errCh <- nil
 
-				break
-			}
-			if err != nil {
+				return
+			case err != nil:
 				errCh <- fmt.Errorf("failed to read csv data from file %s during %s: %w", filePath, operation, err)
 
-				break
+				return
+			default:
+				recordCh <- record
 			}
-			recordCh <- record
 		}
 	}(errCh)
 

@@ -1,6 +1,6 @@
 # Mainflux Migration Tool
 
-A tool that is used to migrate from one version of [mainflux][mainflux-url] to another.
+A tool that is used to migrate from an earlier version of [mainflux][mainflux-url] to the latest version.
 
 ## Installation
 
@@ -30,7 +30,7 @@ Flags:
 
 ### 1. Export From Version 0.13.0
 
-Make sure you have started mainflux deployment with version 0.13.0
+Make sure you have started mainflux deployment with version 0.13.0.
 
 ```bash
 ./build/mainflux-migrate -f 0.13.0 -o export
@@ -48,7 +48,7 @@ Make sure you have started mainflux deployment with version 0.13.0
 
 ### 2. Import To Version 0.14.0
 
-Make sure you have started mainflux deployment with version 0.14.0
+Make sure you have started mainflux deployment with version 0.14.0.
 
 ```bash
 ./build/mainflux-migrate -t 0.14.0 -o import
@@ -58,7 +58,7 @@ Make sure you have started mainflux deployment with version 0.14.0
 {"level":"debug","message":"created things","ts":"2023-03-21T15:24:12.748550379Z"}
 {"level":"debug","message":"created channels","ts":"2023-03-21T15:24:15.504673694Z"}
 {"level":"debug","message":"created connections","ts":"2023-03-21T15:26:41.718172029Z"}
-{"level":"info","message":"finished importing to version 0.14.0","ts":"2023-03-21T15:26:41.719890531Z"} 
+{"level":"info","message":"finished importing to version 0.14.0","ts":"2023-03-21T15:26:41.719890531Z"}
 ```
 
 ## Testing

@@ -5,15 +5,10 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	mflog "github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/migrations/migrate"
 	"github.com/spf13/cobra"
-)
-
-const (
-	migrationDuration = 1 * time.Hour
 )
 
 func main() {
@@ -24,7 +19,7 @@ func main() {
 		log.Fatalf(fmt.Sprintf("failed to init logger: %s", err.Error()))
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), migrationDuration)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	var rootCmd = &cobra.Command{

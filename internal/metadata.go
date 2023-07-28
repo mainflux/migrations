@@ -1,7 +1,6 @@
 package util
 
 import (
-	"bytes"
 	"encoding/json"
 )
 
@@ -12,14 +11,13 @@ func MetadataToString(data map[string]interface{}) (string, error) {
 		return "", err
 	}
 
-	return bytes.NewBuffer(jsonData).String(), nil
+	return string(jsonData), nil
 }
 
 // MetadataFromString Decode the JSON string into a map.
 func MetadataFromString(jsonString string) (map[string]interface{}, error) {
 	var data map[string]interface{}
-	err := json.Unmarshal([]byte(jsonString), &data)
-	if err != nil {
+	if err := json.Unmarshal([]byte(jsonString), &data); err != nil {
 		return nil, err
 	}
 

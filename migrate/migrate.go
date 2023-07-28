@@ -3,11 +3,7 @@ package migrate
 import (
 	"context"
 	"fmt"
-	"log"
-	"net/http"
 
-	// For profiling.
-	_ "net/http/pprof"
 	"sync"
 	"time"
 
@@ -16,7 +12,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/julz/prettyprogress"
 	"github.com/julz/prettyprogress/ui"
-	"github.com/mainflux/mainflux/logger"
+	mflog "github.com/mainflux/mainflux/logger"
 	thingspostgres "github.com/mainflux/mainflux/things/postgres" // for version 0.10.0, 0.11.0, 0.12.0 and 0.13.0
 	userspostgres "github.com/mainflux/mainflux/users/postgres"   // for version 0.10.0, 0.11.0, 0.12.0 and 0.13.0
 	"github.com/mainflux/migrations"
@@ -71,11 +67,7 @@ var retrieveSQLQueries = map[string]retrieveQueries{
 	version13: version13Queries,
 }
 
-func Migrate(ctx context.Context, cfg migrations.Config, logger logger.Logger) {
-	go func() {
-		log.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
-
+func Migrate(ctx context.Context, cfg migrations.Config, logger mflog.Logger) {
 	switch cfg.Operation {
 	case importOp:
 		switch cfg.ToVersion {
@@ -96,16 +88,22 @@ func Migrate(ctx context.Context, cfg migrations.Config, logger logger.Logger) {
 	}
 }
 
-func Export(ctx context.Context, cfg migrations.Config, logger logger.Logger) {
+func Export(ctx context.Context, cfg migrations.Config, logger mflog.Logger) {
 	logger.Info(fmt.Sprintf("starting export from version %s", cfg.FromVersion))
 
-	usersDB := connectToUsersDB(cfg.UsersConfig.DBConfig)
+	usersDB, err := connectToUsersDB(cfg.UsersConfig.DBConfig)
+	if err != nil {
+		logger.Error(fmt.Sprintf("failed to connect to users database: %s", err))
+	}
 	defer usersDB.Close()
 
 	usersDatabase := userspostgres.NewDatabase(usersDB)
 	logger.Debug("connected to users database")
 
-	thingsDB := connectToThingsDB(cfg.ThingsConfig.DBConfig)
+	thingsDB, err := connectToThingsDB(cfg.ThingsConfig.DBConfig)
+	if err != nil {
+		logger.Error(fmt.Sprintf("failed to connect to things database: %s", err))
+	}
 	defer thingsDB.Close()
 
 	thingsDatabase := thingspostgres.NewDatabase(thingsDB)
@@ -174,7 +172,7 @@ func Export(ctx context.Context, cfg migrations.Config, logger logger.Logger) {
 	logger.Info(fmt.Sprintf("finished exporting from version %s", version13))
 }
 
-func Import(ctx context.Context, cfg migrations.Config, logger logger.Logger) {
+func Import(ctx context.Context, cfg migrations.Config, logger mflog.Logger) {
 	logger.Info(fmt.Sprintf("starting importing to version %s", cfg.ToVersion))
 
 	writer := uilive.New()
@@ -218,20 +216,20 @@ func Import(ctx context.Context, cfg migrations.Config, logger logger.Logger) {
 	logger.Info(fmt.Sprintf("finished importing to version %s", cfg.ToVersion))
 }
 
-func connectToThingsDB(dbConfig thingspostgres.Config) *sqlx.DB {
+func connectToThingsDB(dbConfig thingspostgres.Config) (*sqlx.DB, error) {
 	db, err := thingspostgres.Connect(dbConfig)
 	if err != nil {
-		log.Fatalf("failed to connect to things postgres: %s", err)
+		return nil, fmt.Errorf("failed to connect to things postgres: %w", err)
 	}
 
-	return db
+	return db, nil
 }
 
-func connectToUsersDB(dbConfig userspostgres.Config) *sqlx.DB {
+func connectToUsersDB(dbConfig userspostgres.Config) (*sqlx.DB, error) {
 	db, err := userspostgres.Connect(dbConfig)
 	if err != nil {
-		log.Fatalf("failed to connect to users postgres: %s", err)
+		return nil, fmt.Errorf("failed to connect to users postgres: %w", err)
 	}
 
-	return db
+	return db, nil
 }
