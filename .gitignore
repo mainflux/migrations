@@ -10,3 +10,12 @@
 *.out
 # Go workspace file
 go.work
+
+# Binaries
+/build
+
+# CSV Output
+/csv
+
+# JSON benchmark outputs
+/scripts/*.json
